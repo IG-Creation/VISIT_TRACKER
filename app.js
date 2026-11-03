@@ -211,21 +211,25 @@ document.addEventListener("DOMContentLoaded", () => {
   const branchSelect = document.getElementById("branch_select");
   const visitDateInput = document.getElementById("visit_date");
 
-  // Sub-sections
-  const typeChips = document.querySelectorAll(".type-chip");
+  // Sub-sections & 3D Selection Elements
+  const typeCards = document.querySelectorAll(".type-card-3d");
   const custStatusToggle = document.getElementById("cust-status-toggle");
   const custStatusVal = document.getElementById("cust_status_val");
   const existingCustIdRow = document.getElementById("existing-cust-id-row");
 
-  // Partner checkboxes
-  const chkPartnerDsa = document.getElementById("chk-partner-dsa");
-  const chkPartnerCon = document.getElementById("chk-partner-connector");
+  // Partner sub-choice buttons & boxes
+  const btnPartnerDsa = document.getElementById("btn-partner-dsa");
+  const btnPartnerCon = document.getElementById("btn-partner-con");
+  const statePartnerDsa = document.getElementById("state-partner-dsa");
+  const statePartnerCon = document.getElementById("state-partner-con");
   const partnerDsaBox = document.getElementById("partner-dsa-box");
   const partnerConBox = document.getElementById("partner-connector-box");
 
-  // Vendor checkboxes
-  const chkVendorTech = document.getElementById("chk-vendor-tech");
-  const chkVendorLegal = document.getElementById("chk-vendor-legal");
+  // Vendor sub-choice buttons & boxes
+  const btnVendorTech = document.getElementById("btn-vendor-tech");
+  const btnVendorLegal = document.getElementById("btn-vendor-legal");
+  const stateVendorTech = document.getElementById("state-vendor-tech");
+  const stateVendorLegal = document.getElementById("state-vendor-legal");
   const vendorTechBox = document.getElementById("vendor-tech-box");
   const vendorLegalBox = document.getElementById("vendor-legal-box");
 
@@ -451,26 +455,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // ==================== VISIT TYPE MULTI-SELECT CHIPS & SUB-SECTIONS ====================
-  typeChips.forEach(chip => {
-    const checkbox = chip.querySelector('input[type="checkbox"]');
-    if (!checkbox) return;
-
-    chip.addEventListener("click", (e) => {
-      if (e.target.tagName !== "INPUT") {
-        checkbox.checked = !checkbox.checked;
-      }
-      const targetId = chip.getAttribute("data-target");
+  // ==================== VISIT TYPE MULTI-SELECT 3D CARDS & SUB-SECTIONS ====================
+  typeCards.forEach(card => {
+    card.addEventListener("click", () => {
+      const isSelected = card.classList.toggle("selected");
+      const targetId = card.getAttribute("data-target");
       const targetSubSec = document.getElementById(targetId);
 
-      if (checkbox.checked) {
-        chip.classList.add("selected");
+      if (isSelected) {
         if (targetSubSec) {
           targetSubSec.style.display = "block";
           targetSubSec.scrollIntoView({ behavior: "smooth", block: "nearest" });
         }
       } else {
-        chip.classList.remove("selected");
         if (targetSubSec) {
           targetSubSec.style.display = "none";
           clearSubSectionInputs(targetSubSec);
@@ -493,45 +490,93 @@ document.addEventListener("DOMContentLoaded", () => {
     container.querySelectorAll(".location-info").forEach(info => {
       info.textContent = "Location not captured yet.";
     });
+    // Reset partner inner state if partner section is cleared
+    if (container.id === "subsec-partner") {
+      if (btnPartnerDsa) btnPartnerDsa.classList.remove("selected");
+      if (btnPartnerCon) btnPartnerCon.classList.remove("selected");
+      if (statePartnerDsa) statePartnerDsa.textContent = "⬜";
+      if (statePartnerCon) statePartnerCon.textContent = "⬜";
+      if (partnerDsaBox) {
+        partnerDsaBox.style.display = "none";
+        clearSubSectionInputs(partnerDsaBox);
+      }
+      if (partnerConBox) {
+        partnerConBox.style.display = "none";
+        clearSubSectionInputs(partnerConBox);
+      }
+    }
+    // Reset vendor inner state if vendor section is cleared
+    if (container.id === "subsec-vendor") {
+      if (btnVendorTech) btnVendorTech.classList.remove("selected");
+      if (btnVendorLegal) btnVendorLegal.classList.remove("selected");
+      if (stateVendorTech) stateVendorTech.textContent = "⬜";
+      if (stateVendorLegal) stateVendorLegal.textContent = "⬜";
+      if (vendorTechBox) {
+        vendorTechBox.style.display = "none";
+        clearSubSectionInputs(vendorTechBox);
+      }
+      if (vendorLegalBox) {
+        vendorLegalBox.style.display = "none";
+        clearSubSectionInputs(vendorLegalBox);
+      }
+    }
   }
 
   // Customer Status Toggle
-  custStatusToggle.querySelectorAll(".segmented-option").forEach(btn => {
-    btn.addEventListener("click", () => {
-      custStatusToggle.querySelectorAll(".segmented-option").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      const val = btn.getAttribute("data-val");
-      custStatusVal.value = val;
-      if (val === "Existing Customer") {
-        existingCustIdRow.style.display = "grid";
-        document.getElementById("cust_id_number").required = true;
-      } else {
-        existingCustIdRow.style.display = "none";
-        document.getElementById("cust_id_number").required = false;
-        document.getElementById("cust_id_number").value = "";
-      }
+  if (custStatusToggle) {
+    custStatusToggle.querySelectorAll(".segmented-option").forEach(btn => {
+      btn.addEventListener("click", () => {
+        custStatusToggle.querySelectorAll(".segmented-option").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const val = btn.getAttribute("data-val");
+        custStatusVal.value = val;
+        if (val === "Existing Customer") {
+          existingCustIdRow.style.display = "grid";
+          document.getElementById("cust_id_number").required = true;
+        } else {
+          existingCustIdRow.style.display = "none";
+          document.getElementById("cust_id_number").required = false;
+          document.getElementById("cust_id_number").value = "";
+        }
+      });
     });
-  });
+  }
 
-  // Partner Visit: DSA & Connector Boxes
-  chkPartnerDsa.addEventListener("change", () => {
-    partnerDsaBox.style.display = chkPartnerDsa.checked ? "block" : "none";
-    if (!chkPartnerDsa.checked) clearSubSectionInputs(partnerDsaBox);
-  });
-  chkPartnerCon.addEventListener("change", () => {
-    partnerConBox.style.display = chkPartnerCon.checked ? "block" : "none";
-    if (!chkPartnerCon.checked) clearSubSectionInputs(partnerConBox);
-  });
+  // Partner Visit: DSA & Connector Sub-choice buttons
+  if (btnPartnerDsa) {
+    btnPartnerDsa.addEventListener("click", () => {
+      const isSelected = btnPartnerDsa.classList.toggle("selected");
+      if (statePartnerDsa) statePartnerDsa.textContent = isSelected ? "✓" : "⬜";
+      partnerDsaBox.style.display = isSelected ? "block" : "none";
+      if (!isSelected) clearSubSectionInputs(partnerDsaBox);
+    });
+  }
+  if (btnPartnerCon) {
+    btnPartnerCon.addEventListener("click", () => {
+      const isSelected = btnPartnerCon.classList.toggle("selected");
+      if (statePartnerCon) statePartnerCon.textContent = isSelected ? "✓" : "⬜";
+      partnerConBox.style.display = isSelected ? "block" : "none";
+      if (!isSelected) clearSubSectionInputs(partnerConBox);
+    });
+  }
 
-  // Vendor Visit: Tech & Legal Boxes
-  chkVendorTech.addEventListener("change", () => {
-    vendorTechBox.style.display = chkVendorTech.checked ? "block" : "none";
-    if (!chkVendorTech.checked) clearSubSectionInputs(vendorTechBox);
-  });
-  chkVendorLegal.addEventListener("change", () => {
-    vendorLegalBox.style.display = chkVendorLegal.checked ? "block" : "none";
-    if (!chkVendorLegal.checked) clearSubSectionInputs(vendorLegalBox);
-  });
+  // Vendor Visit: Tech & Legal Sub-choice buttons
+  if (btnVendorTech) {
+    btnVendorTech.addEventListener("click", () => {
+      const isSelected = btnVendorTech.classList.toggle("selected");
+      if (stateVendorTech) stateVendorTech.textContent = isSelected ? "✓" : "⬜";
+      vendorTechBox.style.display = isSelected ? "block" : "none";
+      if (!isSelected) clearSubSectionInputs(vendorTechBox);
+    });
+  }
+  if (btnVendorLegal) {
+    btnVendorLegal.addEventListener("click", () => {
+      const isSelected = btnVendorLegal.classList.toggle("selected");
+      if (stateVendorLegal) stateVendorLegal.textContent = isSelected ? "✓" : "⬜";
+      vendorLegalBox.style.display = isSelected ? "block" : "none";
+      if (!isSelected) clearSubSectionInputs(vendorLegalBox);
+    });
+  }
 
   // ==================== PHOTO & GPS CAPTURE ====================
   function setupPhotoUpload(inputId, previewId) {
@@ -627,12 +672,12 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
 
     const selectedTypes = [];
-    document.querySelectorAll('input[name="visit_types"]:checked').forEach(c => {
-      selectedTypes.push(c.value);
+    document.querySelectorAll(".type-card-3d.selected").forEach(card => {
+      selectedTypes.push(card.getAttribute("data-type"));
     });
 
     if (selectedTypes.length === 0) {
-      alert("Please select at least one Visit Type from the options!");
+      alert("Please select at least one Visit Type by clicking a Visit Type card above!");
       return;
     }
 
@@ -673,9 +718,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (selectedTypes.includes("Partner Visit")) {
+      const isDsaSelected = btnPartnerDsa && btnPartnerDsa.classList.contains("selected");
+      const isConSelected = btnPartnerCon && btnPartnerCon.classList.contains("selected");
       const partnerSubtypes = [];
-      if (chkPartnerDsa.checked) partnerSubtypes.push("DSA visit");
-      if (chkPartnerCon.checked) partnerSubtypes.push("Connector Visit");
+      if (isDsaSelected) partnerSubtypes.push("DSA visit");
+      if (isConSelected) partnerSubtypes.push("Connector Visit");
 
       if (partnerSubtypes.length === 0) {
         alert("Please select at least one Partner Visit Type (DSA visit or Connector Visit)!");
@@ -687,7 +734,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       payload.partner_visit = {
         subtypes: partnerSubtypes,
-        dsa: chkPartnerDsa.checked ? {
+        dsa: isDsaSelected ? {
           name: document.getElementById("dsa_name").value.trim(),
           code: `FBGP${document.getElementById("dsa_code_num").value.trim()}`,
           mobile: document.getElementById("dsa_mobile").value.trim(),
@@ -698,7 +745,7 @@ document.addEventListener("DOMContentLoaded", () => {
           longitude: document.getElementById("dsa_lon").value || null,
           location_timestamp: document.getElementById("dsa_loc_ts").value || null,
         } : null,
-        connector: chkPartnerCon.checked ? {
+        connector: isConSelected ? {
           name: document.getElementById("con_name").value.trim(),
           code: `FGP${document.getElementById("con_code_num").value.trim()}`,
           mobile: document.getElementById("con_mobile").value.trim(),
@@ -713,9 +760,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (selectedTypes.includes("Vendor Visit")) {
+      const isTechSelected = btnVendorTech && btnVendorTech.classList.contains("selected");
+      const isLegalSelected = btnVendorLegal && btnVendorLegal.classList.contains("selected");
       const vendorSubtypes = [];
-      if (chkVendorTech.checked) vendorSubtypes.push("Technical Vendor");
-      if (chkVendorLegal.checked) vendorSubtypes.push("Legal Vendor");
+      if (isTechSelected) vendorSubtypes.push("Technical Vendor");
+      if (isLegalSelected) vendorSubtypes.push("Legal Vendor");
 
       if (vendorSubtypes.length === 0) {
         alert("Please select at least one Vendor Visit Type (Technical Vendor or Legal Vendor)!");
@@ -729,7 +778,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       payload.vendor_visit = {
         subtypes: vendorSubtypes,
-        technical: chkVendorTech.checked ? {
+        technical: isTechSelected ? {
           name: document.getElementById("vtech_name").value.trim(),
           code: techCodeRaw ? `V${techCodeRaw}` : null,
           mobile: document.getElementById("vtech_mobile").value.trim(),
@@ -740,7 +789,7 @@ document.addEventListener("DOMContentLoaded", () => {
           longitude: document.getElementById("vtech_lon").value || null,
           location_timestamp: document.getElementById("vtech_loc_ts").value || null,
         } : null,
-        legal: chkVendorLegal.checked ? {
+        legal: isLegalSelected ? {
           name: document.getElementById("vlegal_name").value.trim(),
           code: legalCodeRaw ? `V${legalCodeRaw}` : null,
           mobile: document.getElementById("vlegal_mobile").value.trim(),
@@ -811,17 +860,7 @@ document.addEventListener("DOMContentLoaded", () => {
     submitBtn.innerHTML = "<span>🚀</span> Submit &amp; Log All Visits";
 
     alert(`🎉 SUCCESS! Generated ${createdCount} visit record(s) in system.`);
-    form.reset();
-    setupDateRestrictions();
-    typeChips.forEach(c => {
-      c.classList.remove("selected");
-      const chk = c.querySelector('input[type="checkbox"]');
-      if (chk) chk.checked = false;
-    });
-    document.querySelectorAll(".sub-section-card").forEach(c => {
-      c.style.display = "none";
-      clearSubSectionInputs(c);
-    });
+    resetEntireForm();
   });
 
   // Client-Side Multi-Visit Processor (ensures 100% functionality on GitHub Pages!)
@@ -1036,27 +1075,52 @@ document.addEventListener("DOMContentLoaded", () => {
     return newEntries.length;
   }
 
+  // Reset Entire Form Helper
+  function resetEntireForm() {
+    form.reset();
+    setupDateRestrictions();
+    document.querySelectorAll(".type-card-3d").forEach(card => card.classList.remove("selected"));
+    document.querySelectorAll(".sub-choice-btn").forEach(btn => btn.classList.remove("selected"));
+    if (statePartnerDsa) statePartnerDsa.textContent = "⬜";
+    if (statePartnerCon) statePartnerCon.textContent = "⬜";
+    if (stateVendorTech) stateVendorTech.textContent = "⬜";
+    if (stateVendorLegal) stateVendorLegal.textContent = "⬜";
+    if (partnerDsaBox) partnerDsaBox.style.display = "none";
+    if (partnerConBox) partnerConBox.style.display = "none";
+    if (vendorTechBox) vendorTechBox.style.display = "none";
+    if (vendorLegalBox) vendorLegalBox.style.display = "none";
+    document.querySelectorAll(".sub-section-card").forEach(c => {
+      c.style.display = "none";
+      clearSubSectionInputs(c);
+    });
+    if (custStatusToggle) {
+      custStatusToggle.querySelectorAll(".segmented-option").forEach(b => {
+        if (b.getAttribute("data-val") === "New Customer") {
+          b.classList.add("active");
+        } else {
+          b.classList.remove("active");
+        }
+      });
+    }
+    if (custStatusVal) custStatusVal.value = "New Customer";
+    if (existingCustIdRow) existingCustIdRow.style.display = "none";
+    const custIdNum = document.getElementById("cust_id_number");
+    if (custIdNum) {
+      custIdNum.required = false;
+      custIdNum.value = "";
+    }
+  }
+
   // Reset and Cancel
   document.getElementById("btn-form-reset").addEventListener("click", () => {
     if (confirm("Reset all form entries?")) {
-      form.reset();
-      setupDateRestrictions();
-      typeChips.forEach(c => {
-        c.classList.remove("selected");
-        const chk = c.querySelector('input[type="checkbox"]');
-        if (chk) chk.checked = false;
-      });
-      document.querySelectorAll(".sub-section-card").forEach(c => {
-        c.style.display = "none";
-        clearSubSectionInputs(c);
-      });
+      resetEntireForm();
     }
   });
 
   document.getElementById("btn-form-cancel").addEventListener("click", () => {
     if (confirm("Discard changes?")) {
-      form.reset();
-      setupDateRestrictions();
+      resetEntireForm();
     }
   });
 
