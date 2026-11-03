@@ -1,18 +1,28 @@
-"""Data models and validation for Visit Tracker."""
+"""Data models and strict field validations for Visit Tracker."""
 
 from __future__ import annotations
-from dataclasses import dataclass, field, asdict
-from datetime import datetime
+from dataclasses import dataclass, asdict
+from datetime import datetime, date, timedelta
 from enum import Enum
 import re
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 
-class VisitStatus(str, Enum):
-    SCHEDULED = "SCHEDULED"
-    CHECKED_IN = "CHECKED_IN"
-    CHECKED_OUT = "CHECKED_OUT"
-    CANCELLED = "CANCELLED"
+class UserRole(str, Enum):
+    BDO = "BDO"
+    BDM = "BDM"
+    BPM = "BPM"
+    BCM = "BCM"
+    CCM = "CCM"
+    CBM = "CBM"
+
+
+class VisitType(str, Enum):
+    CUSTOMER = "Customer Visit"
+    PARTNER = "Partner Visit"
+    VENDOR = "Vendor Visit"
+    BUSINESS = "Business Visit"
+    OTHER = "Other Visit"
 
 
 class ValidationError(ValueError):
@@ -20,157 +30,167 @@ class ValidationError(ValueError):
     pass
 
 
-def validate_email(email: Optional[str]) -> Optional[str]:
-    """Validate email address format if provided."""
-    if not email:
-        return None
-    cleaned = email.strip()
-    if not cleaned:
-        return None
-    if ".." in cleaned:
-        raise ValidationError(f"Invalid email format: '{email}'")
-    pattern = r"^[a-zA-Z0-9_.+-]+@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$"
-    if not re.match(pattern, cleaned):
-        raise ValidationError(f"Invalid email format: '{email}'")
-    return cleaned.lower()
-
-
-def validate_phone(phone: Optional[str]) -> Optional[str]:
-    """Validate and clean phone number if provided."""
-    if not phone:
-        return None
-    cleaned = phone.strip()
-    if not cleaned:
-        return None
-    # Allow digits, spaces, plus, minus, parentheses; at least 7 digits
-    digits = re.sub(r"\D", "", cleaned)
-    if len(digits) < 7 or len(digits) > 15:
-        raise ValidationError(f"Invalid phone number '{phone}': must contain between 7 and 15 digits.")
+def clean_name(value: Optional[str], field_name: str = "Name") -> str:
+    """Validate that name has no numeric characters and clean extra whitespace."""
+    if not value or not str(value).strip():
+        raise ValidationError(f"{field_name} is required.")
+    cleaned = re.sub(r"\s+", " ", str(value)).strip()
+    if re.search(r"\d", cleaned):
+        raise ValidationError(f"{field_name} cannot contain numeric digits.")
+    if not re.match(r"^[a-zA-Z\s.'-]+$", cleaned):
+        raise ValidationError(f"{field_name} contains invalid characters.")
     return cleaned
 
 
-def validate_required_string(value: Optional[str], field_name: str) -> str:
-    """Validate that a required string is present and not empty."""
-    if value is None or not str(value).strip():
-        raise ValidationError(f"Field '{field_name}' is required and cannot be empty.")
-    return str(value).strip()
+def validate_user_code(value: Optional[str]) -> str:
+    """Validate User code: starts with FMF followed by up to 6 digits."""
+    if not value or not str(value).strip():
+        raise ValidationError("User Code is required.")
+    raw = str(value).strip().upper()
+    if not raw.startswith("FMF"):
+        raise ValidationError("User Code must start with 'FMF'.")
+    digits = raw[3:]
+    if not digits.isdigit():
+        raise ValidationError("User Code can only contain numeric digits after 'FMF'.")
+    if len(digits) == 0 or len(digits) > 6:
+        raise ValidationError("User Code numeric part must be between 1 and 6 digits.")
+    return f"FMF{digits}"
+
+
+def validate_mobile(value: Optional[str], field_name: str = "Mobile number", required: bool = True) -> Optional[str]:
+    """Validate mobile number: exactly 10 numeric digits (handles +91 or 0 prefix)."""
+    if not value or not str(value).strip():
+        if required:
+            raise ValidationError(f"{field_name} is required.")
+        return None
+    cleaned = re.sub(r"\D", "", str(value).strip())
+    if len(cleaned) == 12 and cleaned.startswith("91"):
+        cleaned = cleaned[2:]
+    elif len(cleaned) == 11 and cleaned.startswith("0"):
+        cleaned = cleaned[1:]
+    if len(cleaned) != 10:
+        raise ValidationError(f"{field_name} must contain exactly 10 numeric digits.")
+    return cleaned
+
+
+def validate_dsa_code(value: Optional[str]) -> str:
+    """Validate DSA code: starts with FBGP followed by up to 6 digits."""
+    if not value or not str(value).strip():
+        raise ValidationError("DSA Code is required.")
+    raw = str(value).strip().upper()
+    if not raw.startswith("FBGP"):
+        raise ValidationError("DSA Code must start with 'FBGP'.")
+    digits = raw[4:]
+    if not digits.isdigit() or len(digits) == 0 or len(digits) > 6:
+        raise ValidationError("DSA Code numeric part must be between 1 and 6 digits.")
+    return f"FBGP{digits}"
+
+
+def validate_connector_code(value: Optional[str]) -> str:
+    """Validate Connector code: starts with FGP followed by up to 6 digits."""
+    if not value or not str(value).strip():
+        raise ValidationError("Connector Code is required.")
+    raw = str(value).strip().upper()
+    if not raw.startswith("FGP"):
+        raise ValidationError("Connector Code must start with 'FGP'.")
+    digits = raw[3:]
+    if not digits.isdigit() or len(digits) == 0 or len(digits) > 6:
+        raise ValidationError("Connector Code numeric part must be between 1 and 6 digits.")
+    return f"FGP{digits}"
+
+
+def validate_vendor_code(value: Optional[str]) -> Optional[str]:
+    """Validate Vendor code: optional, starts with V followed by up to 6 digits."""
+    if not value or not str(value).strip():
+        return None
+    raw = str(value).strip().upper()
+    if not raw.startswith("V"):
+        raise ValidationError("Vendor Code must start with 'V'.")
+    digits = raw[1:]
+    if not digits.isdigit() or len(digits) == 0 or len(digits) > 6:
+        raise ValidationError("Vendor Code numeric part must be between 1 and 6 digits.")
+    return f"V{digits}"
+
+
+def validate_lead_or_loan_id(value: Optional[str], id_type: str = "ID") -> str:
+    """Validate Lead or Loan Application ID: numeric only, up to 6 digits."""
+    if not value or not str(value).strip():
+        raise ValidationError(f"{id_type} is required for existing customer.")
+    cleaned = str(value).strip()
+    if not cleaned.isdigit() or len(cleaned) == 0 or len(cleaned) > 6:
+        raise ValidationError(f"{id_type} must be numeric and not more than 6 digits.")
+    return cleaned
+
+
+def validate_visit_date(value: Optional[str]) -> str:
+    """Validate visit date: format YYYY-MM-DD, not in future, not older than 62 days (2 months)."""
+    if not value or not str(value).strip():
+        raise ValidationError("Visit Date is required.")
+    try:
+        v_date = datetime.strptime(str(value).strip(), "%Y-%m-%d").date()
+    except ValueError:
+        raise ValidationError("Invalid Visit Date format. Use YYYY-MM-DD.")
+
+    today = date.today()
+    if v_date > today:
+        raise ValidationError("Visit Date cannot be in the future.")
+
+    # Not older than 2 months (approx 62 days)
+    two_months_ago = today - timedelta(days=62)
+    if v_date < two_months_ago:
+        raise ValidationError(f"Visit Date cannot be more than 2 months in the past (earliest allowed: {two_months_ago}).")
+
+    return v_date.isoformat()
 
 
 @dataclass
-class Visitor:
-    name: str
-    id: Optional[int] = None
-    visitor_id: Optional[str] = None
-    email: Optional[str] = None
-    phone: Optional[str] = None
-    company: Optional[str] = None
-    id_type: Optional[str] = "National ID"
-    id_number: Optional[str] = None
-    created_at: Optional[str] = None
-
-    def __post_init__(self):
-        self.name = validate_required_string(self.name, "visitor.name")
-        self.email = validate_email(self.email)
-        self.phone = validate_phone(self.phone)
-        if self.company:
-            self.company = self.company.strip()
-        if self.id_type:
-            self.id_type = self.id_type.strip()
-        if self.id_number:
-            self.id_number = self.id_number.strip()
-
-    def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
-
-
-@dataclass
-class Host:
-    name: str
-    id: Optional[int] = None
-    email: Optional[str] = None
-    department: Optional[str] = None
-    phone: Optional[str] = None
-    active: bool = True
-    created_at: Optional[str] = None
-
-    def __post_init__(self):
-        self.name = validate_required_string(self.name, "host.name")
-        self.email = validate_email(self.email)
-        self.phone = validate_phone(self.phone)
-        if self.department:
-            self.department = self.department.strip()
-
-    def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
-
-
-@dataclass
-class Location:
-    name: str
-    id: Optional[int] = None
-    building: Optional[str] = None
-    floor: Optional[str] = None
-    created_at: Optional[str] = None
-
-    def __post_init__(self):
-        self.name = validate_required_string(self.name, "location.name")
-        if self.building:
-            self.building = self.building.strip()
-        if self.floor:
-            self.floor = self.floor.strip()
-
-    def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
-
-
-@dataclass
-class Visit:
-    visitor_id: int
-    purpose: str
+class VisitEntry:
+    user_role: str
+    user_name: str
+    user_code: str
+    state: str
+    cluster: str
+    branch: str
+    visit_date: str
+    visit_type: str
+    entity_name: str
     id: Optional[int] = None
     visit_code: Optional[str] = None
-    host_id: Optional[int] = None
-    location_id: Optional[int] = None
-    category: str = "Corporate Visitor"
-    badge_number: Optional[str] = None
-    status: VisitStatus = VisitStatus.SCHEDULED
-    expected_checkin: Optional[str] = None
-    checkin_time: Optional[str] = None
-    checkout_time: Optional[str] = None
+    sub_type: Optional[str] = None
+    customer_status: Optional[str] = None  # "New Customer" or "Existing Customer"
+    id_type: Optional[str] = None          # "Lead ID" or "Loan Application ID"
+    entity_code: Optional[str] = None      # ID / DSA Code / Connector Code / Vendor Code
+    mobile: Optional[str] = None
+    reason: Optional[str] = None
+    address: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    location_timestamp: Optional[str] = None
+    photo_data: Optional[str] = None
+    status: str = "Logged"
     notes: Optional[str] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
-    # Joined entity details for presentation
-    visitor_name: Optional[str] = None
-    visitor_company: Optional[str] = None
-    visitor_email: Optional[str] = None
-    visitor_phone: Optional[str] = None
-    host_name: Optional[str] = None
-    host_department: Optional[str] = None
-    location_name: Optional[str] = None
 
     def __post_init__(self):
-        self.purpose = validate_required_string(self.purpose, "visit.purpose")
-        if isinstance(self.status, str):
-            try:
-                self.status = VisitStatus(self.status.upper())
-            except ValueError:
-                valid = [s.value for s in VisitStatus]
-                raise ValidationError(f"Invalid status '{self.status}'. Must be one of: {valid}")
+        # Validate Role
+        if self.user_role not in [r.value for r in UserRole]:
+            raise ValidationError(f"Invalid User Role '{self.user_role}'. Must be one of: {[r.value for r in UserRole]}")
 
-    def to_dict(self) -> Dict[str, Any]:
-        d = asdict(self)
-        d["status"] = self.status.value
-        return d
+        # Clean Names
+        self.user_name = clean_name(self.user_name, "User Name")
+        if self.entity_name:
+            self.entity_name = clean_name(self.entity_name, "Entity Name")
 
+        # Validate User Code
+        self.user_code = validate_user_code(self.user_code)
 
-@dataclass
-class AuditLog:
-    action: str
-    id: Optional[int] = None
-    visit_id: Optional[int] = None
-    details: Optional[str] = None
-    timestamp: Optional[str] = None
+        # Validate Date
+        self.visit_date = validate_visit_date(self.visit_date)
+
+        # Validate Mobile if present
+        if self.mobile:
+            self.mobile = validate_mobile(self.mobile, "Mobile number", required=False)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
