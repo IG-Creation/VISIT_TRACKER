@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Visit Tracker | Field Registration & Master Dashboard</title>
+  <title>Visit Tracker | Enterprise Field Management & Master Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 </head>
@@ -12,10 +15,12 @@
   <!-- Top Navbar -->
   <header class="navbar">
     <div class="brand">
-      <div class="brand-icon-3d">🏢</div>
+      <div class="brand-icon-3d">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>
+      </div>
       <div>
-        <div class="brand-title">Visit Tracker</div>
-        <div class="brand-sub">Field Visit Management System</div>
+        <div class="brand-title">VISIT TRACKER</div>
+        <div class="brand-sub">Enterprise Field Audit &amp; Management System</div>
       </div>
     </div>
 
@@ -42,10 +47,12 @@
       <div class="hero-3d-card">
         <div class="hero-text">
           <div class="badge-tag-3d">✨ Official Field Logger</div>
-          <h1>Visit Registration Form</h1>
-          <p>Record field visits with GPS coordinates, timestamps, and photo verification.</p>
+          <h1>Field Visit Registration &amp; Verification</h1>
+          <p>Multi-visit logger with live camera capture, GPS satellite locking &amp; tamper-proof timestamps.</p>
         </div>
-        <div style="font-size: 2.5rem;">📋📍</div>
+        <div class="hero-icon-cluster">
+          <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
       </div>
 
       <form id="visit-main-form" autocomplete="off">
@@ -70,14 +77,14 @@
                 </label>
                 <select id="user_role" name="user_role" class="form-select" required>
                   <option value="">Select Role...</option>
-                  <option value="BDO">BDO (Business Development Officer)</option>
-                  <option value="BDM">BDM (Business Development Manager)</option>
-                  <option value="BPM">BPM (Branch Product Manager)</option>
-                  <option value="BCM">BCM (Branch Credit Manager)</option>
-                  <option value="CCM">CCM (Cluster Credit Manager)</option>
-                  <option value="CBM">CBM (Cluster Business Manager)</option>
+                  <option value="BDO">BDO</option>
+                  <option value="BDM">BDM</option>
+                  <option value="BPM">BPM</option>
+                  <option value="BCM">BCM</option>
+                  <option value="CCM">CCM</option>
+                  <option value="CBM">CBM</option>
                 </select>
-                <span class="field-hint">Select your current role</span>
+                <span class="field-hint">Select officer designation</span>
               </div>
 
               <!-- Enter Name -->
@@ -303,11 +310,23 @@
                 </div>
 
                 <div class="capture-box">
-                  <div class="capture-item">
-                    <label class="form-label">📸 Customer Photo Proof</label>
-                    <input type="file" id="cust_photo_file" accept="image/*" class="form-input" style="padding: 0.25rem; height:auto;">
+                  <div class="capture-item" id="wrap-photo-cust">
+                    <label class="form-label">
+                      <span>📸</span> Photo Proof <span class="req">* (Mandatory)</span>
+                    </label>
+                    <div class="photo-btn-group">
+                      <button type="button" class="btn-photo-action btn-live-snap" data-prefix="cust">
+                        <span>📷</span> Click Live Photo
+                      </button>
+                      <button type="button" class="btn-photo-action btn-upload-trigger" data-prefix="cust">
+                        <span>📁</span> Upload Photo
+                      </button>
+                    </div>
+                    <input type="file" id="cust_photo_camera" accept="image/*" capture="environment" class="photo-hidden-input">
+                    <input type="file" id="cust_photo_file" accept="image/*" class="photo-hidden-input">
+                    <input type="hidden" id="cust_photo_data" name="cust_photo_data">
                     <div class="photo-preview-wrap" id="cust_photo_preview">
-                      <span class="photo-empty-text">No photo uploaded</span>
+                      <span class="photo-empty-text">No photo captured / uploaded yet</span>
                     </div>
                   </div>
                   <div class="capture-item">
@@ -328,12 +347,15 @@
                   <div class="sub-section-title">
                     <span>🤝</span> Partner Visit Details
                   </div>
-                  <span class="badge-tag-3d" style="background:#eff6ff; color:#2563eb; border-color:#bfdbfe;">Partner</span>
+                  <span class="badge-tag-3d" style="background:#eff6ff; color:#2563eb; border-color:#bfdbfe;">Partner Visit</span>
                 </div>
 
                 <!-- Sub-Choice Pills -->
-                <div class="form-group" style="margin-bottom: 0.75rem;">
-                  <label class="form-label">Select Partner Visit Type(s) (You can select both) <span class="req">*</span></label>
+                <div class="form-group" style="margin-bottom: 0.85rem;">
+                  <label class="form-label">
+                    <span>🤝</span> Select Partner Visit Option(s) <span class="req">*</span>
+                    <small style="color:var(--slate-500); font-weight:normal;">(Select DSA, Connector, or Both partners)</small>
+                  </label>
                   <div class="sub-choice-grid">
                     <button type="button" class="sub-choice-btn" id="btn-partner-dsa" data-target="partner-dsa-box">
                       <span>🏢</span> DSA visit <span class="choice-state" id="state-partner-dsa">⬜</span>
@@ -341,12 +363,17 @@
                     <button type="button" class="sub-choice-btn" id="btn-partner-con" data-target="partner-connector-box">
                       <span>🔗</span> Connector Visit <span class="choice-state" id="state-partner-con">⬜</span>
                     </button>
+                    <button type="button" class="sub-choice-btn sub-choice-both" id="btn-partner-both">
+                      <span>✨</span> Select Both (DSA &amp; Connector)
+                    </button>
                   </div>
                 </div>
 
                 <!-- DSA Box -->
                 <div id="partner-dsa-box" class="sub-inner-box box-dsa" style="display: none;">
-                  <div style="font-weight: 800; color: #0284c7; margin-bottom: 0.75rem; font-size: 0.88rem;">🏢 Direct Selling Agent (DSA) Details</div>
+                  <div class="sub-inner-title" style="color: #0284c7;">
+                    <span>🏢 [PARTNER 1]</span> Direct Selling Agent (DSA) Details
+                  </div>
                   <div class="form-grid">
                     <div class="form-group">
                       <label class="form-label" for="dsa_name">DSA Name <span class="req">*</span></label>
@@ -376,13 +403,27 @@
                   </div>
                   <div class="form-group">
                     <label class="form-label" for="dsa_address">DSA Address (Optional)</label>
-                    <textarea id="dsa_address" class="form-textarea" rows="2"></textarea>
+                    <textarea id="dsa_address" class="form-textarea" rows="2" placeholder="Office / shop location address"></textarea>
                   </div>
                   <div class="capture-box">
-                    <div class="capture-item">
-                      <label class="form-label">📸 DSA Photo</label>
-                      <input type="file" id="dsa_photo_file" accept="image/*" class="form-input" style="padding: 0.25rem; height:auto;">
-                      <div class="photo-preview-wrap" id="dsa_photo_preview"><span class="photo-empty-text">No photo uploaded</span></div>
+                    <div class="capture-item" id="wrap-photo-dsa">
+                      <label class="form-label">
+                        <span>📸</span> DSA Photo Proof <span class="req">* (Mandatory)</span>
+                      </label>
+                      <div class="photo-btn-group">
+                        <button type="button" class="btn-photo-action btn-live-snap" data-prefix="dsa">
+                          <span>📷</span> Click Live Photo
+                        </button>
+                        <button type="button" class="btn-photo-action btn-upload-trigger" data-prefix="dsa">
+                          <span>📁</span> Upload Photo
+                        </button>
+                      </div>
+                      <input type="file" id="dsa_photo_camera" accept="image/*" capture="environment" class="photo-hidden-input">
+                      <input type="file" id="dsa_photo_file" accept="image/*" class="photo-hidden-input">
+                      <input type="hidden" id="dsa_photo_data" name="dsa_photo_data">
+                      <div class="photo-preview-wrap" id="dsa_photo_preview">
+                        <span class="photo-empty-text">No photo captured / uploaded yet</span>
+                      </div>
                     </div>
                     <div class="capture-item">
                       <label class="form-label">📍 Capture DSA Lat/Long &amp; Timestamp <span class="req">*</span></label>
@@ -395,7 +436,9 @@
 
                 <!-- Connector Box -->
                 <div id="partner-connector-box" class="sub-inner-box box-connector" style="display: none;">
-                  <div style="font-weight: 800; color: #9333ea; margin-bottom: 0.75rem; font-size: 0.88rem;">🔗 Connector Details</div>
+                  <div class="sub-inner-title" style="color: #9333ea;">
+                    <span>🔗 [PARTNER 2]</span> Connector Partner Details
+                  </div>
                   <div class="form-grid">
                     <div class="form-group">
                       <label class="form-label" for="con_name">Connector Name <span class="req">*</span></label>
@@ -425,13 +468,27 @@
                   </div>
                   <div class="form-group">
                     <label class="form-label" for="con_address">Connector Address (Optional)</label>
-                    <textarea id="con_address" class="form-textarea" rows="2"></textarea>
+                    <textarea id="con_address" class="form-textarea" rows="2" placeholder="Residence / workplace address"></textarea>
                   </div>
                   <div class="capture-box">
-                    <div class="capture-item">
-                      <label class="form-label">📸 Connector Photo</label>
-                      <input type="file" id="con_photo_file" accept="image/*" class="form-input" style="padding: 0.25rem; height:auto;">
-                      <div class="photo-preview-wrap" id="con_photo_preview"><span class="photo-empty-text">No photo uploaded</span></div>
+                    <div class="capture-item" id="wrap-photo-con">
+                      <label class="form-label">
+                        <span>📸</span> Connector Photo Proof <span class="req">* (Mandatory)</span>
+                      </label>
+                      <div class="photo-btn-group">
+                        <button type="button" class="btn-photo-action btn-live-snap" data-prefix="con">
+                          <span>📷</span> Click Live Photo
+                        </button>
+                        <button type="button" class="btn-photo-action btn-upload-trigger" data-prefix="con">
+                          <span>📁</span> Upload Photo
+                        </button>
+                      </div>
+                      <input type="file" id="con_photo_camera" accept="image/*" capture="environment" class="photo-hidden-input">
+                      <input type="file" id="con_photo_file" accept="image/*" class="photo-hidden-input">
+                      <input type="hidden" id="con_photo_data" name="con_photo_data">
+                      <div class="photo-preview-wrap" id="con_photo_preview">
+                        <span class="photo-empty-text">No photo captured / uploaded yet</span>
+                      </div>
                     </div>
                     <div class="capture-item">
                       <label class="form-label">📍 Capture Connector Lat/Long &amp; Timestamp <span class="req">*</span></label>
@@ -451,11 +508,14 @@
                   <div class="sub-section-title">
                     <span>🛠️</span> Vendor Visit Details
                   </div>
-                  <span class="badge-tag-3d" style="background:#fffbeb; color:#d97706; border-color:#fde68a;">Vendor</span>
+                  <span class="badge-tag-3d" style="background:#fffbeb; color:#d97706; border-color:#fde68a;">Vendor Visit</span>
                 </div>
 
-                <div class="form-group" style="margin-bottom: 0.75rem;">
-                  <label class="form-label">Select Vendor Visit Type(s) (You can select both) <span class="req">*</span></label>
+                <div class="form-group" style="margin-bottom: 0.85rem;">
+                  <label class="form-label">
+                    <span>🛠️</span> Select Vendor Visit Option(s) <span class="req">*</span>
+                    <small style="color:var(--slate-500); font-weight:normal;">(Select Tech, Legal, or Both vendors)</small>
+                  </label>
                   <div class="sub-choice-grid">
                     <button type="button" class="sub-choice-btn" id="btn-vendor-tech" data-target="vendor-tech-box">
                       <span>⚙️</span> Technical Vendor <span class="choice-state" id="state-vendor-tech">⬜</span>
@@ -463,12 +523,17 @@
                     <button type="button" class="sub-choice-btn" id="btn-vendor-legal" data-target="vendor-legal-box">
                       <span>⚖️</span> Legal Vendor <span class="choice-state" id="state-vendor-legal">⬜</span>
                     </button>
+                    <button type="button" class="sub-choice-btn sub-choice-both" id="btn-vendor-both">
+                      <span>✨</span> Select Both (Tech &amp; Legal)
+                    </button>
                   </div>
                 </div>
 
                 <!-- Technical Vendor Box -->
                 <div id="vendor-tech-box" class="sub-inner-box box-tech" style="display: none;">
-                  <div style="font-weight: 800; color: #d97706; margin-bottom: 0.75rem; font-size: 0.88rem;">⚙️ Technical Vendor Details</div>
+                  <div class="sub-inner-title" style="color: #d97706;">
+                    <span>⚙️ [VENDOR 1]</span> Technical Vendor Details
+                  </div>
                   <div class="form-grid">
                     <div class="form-group">
                       <label class="form-label" for="vtech_name">Vendor Name <span class="req">*</span></label>
@@ -498,13 +563,27 @@
                   </div>
                   <div class="form-group">
                     <label class="form-label" for="vtech_address">Address (Optional)</label>
-                    <textarea id="vtech_address" class="form-textarea" rows="2"></textarea>
+                    <textarea id="vtech_address" class="form-textarea" rows="2" placeholder="Office / premises address"></textarea>
                   </div>
                   <div class="capture-box">
-                    <div class="capture-item">
-                      <label class="form-label">📸 Photo</label>
-                      <input type="file" id="vtech_photo_file" accept="image/*" class="form-input" style="padding: 0.25rem; height:auto;">
-                      <div class="photo-preview-wrap" id="vtech_photo_preview"><span class="photo-empty-text">No photo uploaded</span></div>
+                    <div class="capture-item" id="wrap-photo-vtech">
+                      <label class="form-label">
+                        <span>📸</span> Tech Vendor Photo Proof <span class="req">* (Mandatory)</span>
+                      </label>
+                      <div class="photo-btn-group">
+                        <button type="button" class="btn-photo-action btn-live-snap" data-prefix="vtech">
+                          <span>📷</span> Click Live Photo
+                        </button>
+                        <button type="button" class="btn-photo-action btn-upload-trigger" data-prefix="vtech">
+                          <span>📁</span> Upload Photo
+                        </button>
+                      </div>
+                      <input type="file" id="vtech_photo_camera" accept="image/*" capture="environment" class="photo-hidden-input">
+                      <input type="file" id="vtech_photo_file" accept="image/*" class="photo-hidden-input">
+                      <input type="hidden" id="vtech_photo_data" name="vtech_photo_data">
+                      <div class="photo-preview-wrap" id="vtech_photo_preview">
+                        <span class="photo-empty-text">No photo captured / uploaded yet</span>
+                      </div>
                     </div>
                     <div class="capture-item">
                       <label class="form-label">📍 Capture Lat/Long &amp; Timestamp <span class="req">*</span></label>
@@ -517,7 +596,9 @@
 
                 <!-- Legal Vendor Box -->
                 <div id="vendor-legal-box" class="sub-inner-box box-legal" style="display: none;">
-                  <div style="font-weight: 800; color: #ea580c; margin-bottom: 0.75rem; font-size: 0.88rem;">⚖️ Legal Vendor Details</div>
+                  <div class="sub-inner-title" style="color: #ea580c;">
+                    <span>⚖️ [VENDOR 2]</span> Legal Vendor Details
+                  </div>
                   <div class="form-grid">
                     <div class="form-group">
                       <label class="form-label" for="vlegal_name">Vendor Name <span class="req">*</span></label>
@@ -547,13 +628,27 @@
                   </div>
                   <div class="form-group">
                     <label class="form-label" for="vlegal_address">Address (Optional)</label>
-                    <textarea id="vlegal_address" class="form-textarea" rows="2"></textarea>
+                    <textarea id="vlegal_address" class="form-textarea" rows="2" placeholder="Office / chamber address"></textarea>
                   </div>
                   <div class="capture-box">
-                    <div class="capture-item">
-                      <label class="form-label">📸 Photo</label>
-                      <input type="file" id="vlegal_photo_file" accept="image/*" class="form-input" style="padding: 0.25rem; height:auto;">
-                      <div class="photo-preview-wrap" id="vlegal_photo_preview"><span class="photo-empty-text">No photo uploaded</span></div>
+                    <div class="capture-item" id="wrap-photo-vlegal">
+                      <label class="form-label">
+                        <span>📸</span> Legal Vendor Photo Proof <span class="req">* (Mandatory)</span>
+                      </label>
+                      <div class="photo-btn-group">
+                        <button type="button" class="btn-photo-action btn-live-snap" data-prefix="vlegal">
+                          <span>📷</span> Click Live Photo
+                        </button>
+                        <button type="button" class="btn-photo-action btn-upload-trigger" data-prefix="vlegal">
+                          <span>📁</span> Upload Photo
+                        </button>
+                      </div>
+                      <input type="file" id="vlegal_photo_camera" accept="image/*" capture="environment" class="photo-hidden-input">
+                      <input type="file" id="vlegal_photo_file" accept="image/*" class="photo-hidden-input">
+                      <input type="hidden" id="vlegal_photo_data" name="vlegal_photo_data">
+                      <div class="photo-preview-wrap" id="vlegal_photo_preview">
+                        <span class="photo-empty-text">No photo captured / uploaded yet</span>
+                      </div>
                     </div>
                     <div class="capture-item">
                       <label class="form-label">📍 Capture Lat/Long &amp; Timestamp <span class="req">*</span></label>
@@ -573,7 +668,7 @@
                   <div class="sub-section-title">
                     <span>💼</span> Business Visit Details
                   </div>
-                  <span class="badge-tag-3d" style="background:#faf5ff; color:#9333ea; border-color:#e9d5ff;">Business</span>
+                  <span class="badge-tag-3d" style="background:#ecfdf5; color:#059669; border-color:#6ee7b7;">Business</span>
                 </div>
 
                 <div class="form-grid">
@@ -600,14 +695,28 @@
 
                 <div class="form-group">
                   <label class="form-label" for="biz_address">Address Details (Optional)</label>
-                  <textarea id="biz_address" class="form-textarea" rows="2"></textarea>
+                  <textarea id="biz_address" class="form-textarea" rows="2" placeholder="Business premises / shop address"></textarea>
                 </div>
 
                 <div class="capture-box">
-                  <div class="capture-item">
-                    <label class="form-label">📸 Photo</label>
-                    <input type="file" id="biz_photo_file" accept="image/*" class="form-input" style="padding: 0.25rem; height:auto;">
-                    <div class="photo-preview-wrap" id="biz_photo_preview"><span class="photo-empty-text">No photo uploaded</span></div>
+                  <div class="capture-item" id="wrap-photo-biz">
+                    <label class="form-label">
+                      <span>📸</span> Business Photo Proof <span class="req">* (Mandatory)</span>
+                    </label>
+                    <div class="photo-btn-group">
+                      <button type="button" class="btn-photo-action btn-live-snap" data-prefix="biz">
+                        <span>📷</span> Click Live Photo
+                      </button>
+                      <button type="button" class="btn-photo-action btn-upload-trigger" data-prefix="biz">
+                        <span>📁</span> Upload Photo
+                      </button>
+                    </div>
+                    <input type="file" id="biz_photo_camera" accept="image/*" capture="environment" class="photo-hidden-input">
+                    <input type="file" id="biz_photo_file" accept="image/*" class="photo-hidden-input">
+                    <input type="hidden" id="biz_photo_data" name="biz_photo_data">
+                    <div class="photo-preview-wrap" id="biz_photo_preview">
+                      <span class="photo-empty-text">No photo captured / uploaded yet</span>
+                    </div>
                   </div>
                   <div class="capture-item">
                     <label class="form-label">📍 Capture Lat/Long &amp; Timestamp <span class="req">*</span></label>
@@ -625,7 +734,7 @@
                   <div class="sub-section-title">
                     <span>🌐</span> Other Visit Details
                   </div>
-                  <span class="badge-tag-3d" style="background:#fff1f2; color:#e11d48; border-color:#fecdd3;">Other</span>
+                  <span class="badge-tag-3d" style="background:#faf5ff; color:#9333ea; border-color:#d8b4fe;">Other</span>
                 </div>
 
                 <div class="form-grid">
@@ -645,14 +754,28 @@
 
                 <div class="form-group">
                   <label class="form-label" for="oth_address">Address (Optional)</label>
-                  <textarea id="oth_address" class="form-textarea" rows="2"></textarea>
+                  <textarea id="oth_address" class="form-textarea" rows="2" placeholder="Visited place address"></textarea>
                 </div>
 
                 <div class="capture-box">
-                  <div class="capture-item">
-                    <label class="form-label">📸 Photo</label>
-                    <input type="file" id="oth_photo_file" accept="image/*" class="form-input" style="padding: 0.25rem; height:auto;">
-                    <div class="photo-preview-wrap" id="oth_photo_preview"><span class="photo-empty-text">No photo uploaded</span></div>
+                  <div class="capture-item" id="wrap-photo-oth">
+                    <label class="form-label">
+                      <span>📸</span> Visit Photo Proof <span class="req">* (Mandatory)</span>
+                    </label>
+                    <div class="photo-btn-group">
+                      <button type="button" class="btn-photo-action btn-live-snap" data-prefix="oth">
+                        <span>📷</span> Click Live Photo
+                      </button>
+                      <button type="button" class="btn-photo-action btn-upload-trigger" data-prefix="oth">
+                        <span>📁</span> Upload Photo
+                      </button>
+                    </div>
+                    <input type="file" id="oth_photo_camera" accept="image/*" capture="environment" class="photo-hidden-input">
+                    <input type="file" id="oth_photo_file" accept="image/*" class="photo-hidden-input">
+                    <input type="hidden" id="oth_photo_data" name="oth_photo_data">
+                    <div class="photo-preview-wrap" id="oth_photo_preview">
+                      <span class="photo-empty-text">No photo captured / uploaded yet</span>
+                    </div>
                   </div>
                   <div class="capture-item">
                     <label class="form-label">📍 Capture Lat/Long &amp; Timestamp <span class="req">*</span></label>
@@ -784,42 +907,101 @@
         </div>
       </div>
 
-      <!-- KPI Metrics Cards 3D -->
-      <div class="kpi-grid-3d">
-        <div class="kpi-card-3d" style="border-left: 4px solid var(--primary);">
-          <div class="kpi-top">
-            <span class="kpi-label">Total Visits</span>
-            <span class="kpi-icon">📊</span>
+      <!-- KPI Metrics Cards: Executive MNC Interactive Analytics -->
+      <div class="kpi-grid-mco">
+        <!-- 1. All Visits -->
+        <div class="kpi-card-mco active" id="kpi-card-total" data-filter-type="" title="Click to view all visits">
+          <div class="kpi-mco-header">
+            <div class="kpi-mco-tag">TOTAL LOGGED</div>
+            <span class="kpi-live-dot" title="Live tracking active"></span>
           </div>
-          <span class="kpi-value" id="kpi-total-visits">0</span>
+          <div class="kpi-mco-main">
+            <div class="kpi-mco-value" id="kpi-total-visits">0</div>
+            <div class="kpi-mco-icon-wrap" style="color: #4f46e5; background: #eef2ff;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+            </div>
+          </div>
+          <div class="kpi-mco-footer">
+            <span class="kpi-mco-sub">100% of volume</span>
+            <span class="kpi-mco-arrow">Filter ↗</span>
+          </div>
+          <div class="kpi-mco-bar"><div class="kpi-mco-fill" style="width: 100%; background: #4f46e5;"></div></div>
         </div>
-        <div class="kpi-card-3d" style="border-left: 4px solid var(--cust-color);">
-          <div class="kpi-top">
-            <span class="kpi-label">Customer Visits</span>
-            <span class="kpi-icon">🏢</span>
+
+        <!-- 2. Customer Visits -->
+        <div class="kpi-card-mco" id="kpi-card-cust" data-filter-type="Customer Visit" title="Click to filter Customer Visits">
+          <div class="kpi-mco-header">
+            <div class="kpi-mco-tag" style="color:#0284c7;">CUSTOMER VISITS</div>
+            <span class="kpi-mco-share" id="kpi-cust-share">0%</span>
           </div>
-          <span class="kpi-value" id="kpi-cust-visits">0</span>
+          <div class="kpi-mco-main">
+            <div class="kpi-mco-value" id="kpi-cust-visits">0</div>
+            <div class="kpi-mco-icon-wrap" style="color: #0284c7; background: #f0f9ff;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+          </div>
+          <div class="kpi-mco-footer">
+            <span class="kpi-mco-sub">Clients &amp; Lead IDs</span>
+            <span class="kpi-mco-arrow">Filter ↗</span>
+          </div>
+          <div class="kpi-mco-bar"><div class="kpi-mco-fill" id="kpi-cust-bar" style="width: 0%; background: #0284c7;"></div></div>
         </div>
-        <div class="kpi-card-3d" style="border-left: 4px solid var(--partner-color);">
-          <div class="kpi-top">
-            <span class="kpi-label">Partner Visits</span>
-            <span class="kpi-icon">🤝</span>
+
+        <!-- 3. Partner Visits -->
+        <div class="kpi-card-mco" id="kpi-card-partner" data-filter-type="Partner Visit" title="Click to filter Partner Visits">
+          <div class="kpi-mco-header">
+            <div class="kpi-mco-tag" style="color:#2563eb;">PARTNER VISITS</div>
+            <span class="kpi-mco-share" id="kpi-partner-share">0%</span>
           </div>
-          <span class="kpi-value" id="kpi-partner-visits">0</span>
+          <div class="kpi-mco-main">
+            <div class="kpi-mco-value" id="kpi-partner-visits">0</div>
+            <div class="kpi-mco-icon-wrap" style="color: #2563eb; background: #eff6ff;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17 2 2a1 1 0 0 0 1.4 0l6.6-6.6a1 1 0 0 0 0-1.4l-5-5a1 1 0 0 0-1.4 0L13 7"/><path d="m3 14 5.5-5.5a1 1 0 0 1 1.4 0l5 5a1 1 0 0 1 0 1.4L9.3 20.5a1 1 0 0 1-1.4 0L3 15.6a1 1 0 0 1 0-1.4z"/></svg>
+            </div>
+          </div>
+          <div class="kpi-mco-footer">
+            <span class="kpi-mco-sub">DSA &amp; Connectors</span>
+            <span class="kpi-mco-arrow">Filter ↗</span>
+          </div>
+          <div class="kpi-mco-bar"><div class="kpi-mco-fill" id="kpi-partner-bar" style="width: 0%; background: #2563eb;"></div></div>
         </div>
-        <div class="kpi-card-3d" style="border-left: 4px solid var(--vendor-color);">
-          <div class="kpi-top">
-            <span class="kpi-label">Vendor Visits</span>
-            <span class="kpi-icon">🛠️</span>
+
+        <!-- 4. Vendor Visits -->
+        <div class="kpi-card-mco" id="kpi-card-vendor" data-filter-type="Vendor Visit" title="Click to filter Vendor Visits">
+          <div class="kpi-mco-header">
+            <div class="kpi-mco-tag" style="color:#d97706;">VENDOR VISITS</div>
+            <span class="kpi-mco-share" id="kpi-vendor-share">0%</span>
           </div>
-          <span class="kpi-value" id="kpi-vendor-visits">0</span>
+          <div class="kpi-mco-main">
+            <div class="kpi-mco-value" id="kpi-vendor-visits">0</div>
+            <div class="kpi-mco-icon-wrap" style="color: #d97706; background: #fffbeb;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            </div>
+          </div>
+          <div class="kpi-mco-footer">
+            <span class="kpi-mco-sub">Technical &amp; Legal</span>
+            <span class="kpi-mco-arrow">Filter ↗</span>
+          </div>
+          <div class="kpi-mco-bar"><div class="kpi-mco-fill" id="kpi-vendor-bar" style="width: 0%; background: #d97706;"></div></div>
         </div>
-        <div class="kpi-card-3d" style="border-left: 4px solid var(--biz-color);">
-          <div class="kpi-top">
-            <span class="kpi-label">Business / Other</span>
-            <span class="kpi-icon">💼</span>
+
+        <!-- 5. Business / Other Visits -->
+        <div class="kpi-card-mco" id="kpi-card-biz" data-filter-type="Business Visit" title="Click to filter Business & Other Visits">
+          <div class="kpi-mco-header">
+            <div class="kpi-mco-tag" style="color:#059669;">BUSINESS / OTHER</div>
+            <span class="kpi-mco-share" id="kpi-biz-share">0%</span>
           </div>
-          <span class="kpi-value" id="kpi-biz-visits">0</span>
+          <div class="kpi-mco-main">
+            <div class="kpi-mco-value" id="kpi-biz-visits">0</div>
+            <div class="kpi-mco-icon-wrap" style="color: #059669; background: #ecfdf5;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            </div>
+          </div>
+          <div class="kpi-mco-footer">
+            <span class="kpi-mco-sub">Enterprise Entities</span>
+            <span class="kpi-mco-arrow">Filter ↗</span>
+          </div>
+          <div class="kpi-mco-bar"><div class="kpi-mco-fill" id="kpi-biz-bar" style="width: 0%; background: #059669;"></div></div>
         </div>
       </div>
 
@@ -839,7 +1021,7 @@
             <thead>
               <tr>
                 <th>Visit Code</th>
-                <th>Visit Date</th>
+                <th>Visit Date &amp; Time</th>
                 <th>Staff Officer</th>
                 <th>Branch &amp; Cluster</th>
                 <th>Type &amp; Sub-Type</th>
@@ -927,6 +1109,35 @@
             <button type="submit" class="btn btn-submit-3d">Save Changes</button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Universal Live Camera Shutter Viewfinder Modal -->
+  <div class="modal-overlay" id="live-camera-modal" style="display:none;">
+    <div class="modal-3d camera-modal-container">
+      <div class="modal-header-3d">
+        <div class="modal-title">
+          <span>📷</span> Live Camera Viewfinder
+        </div>
+        <button type="button" class="close-btn" id="btn-close-camera">&times;</button>
+      </div>
+      <div class="camera-view-body">
+        <div class="video-wrapper">
+          <video id="camera-stream" autoplay playsinline muted></video>
+          <div class="camera-reticle"></div>
+          <div class="camera-watermark">VISIT TRACKER • VERIFIED LIVE CAPTURE</div>
+        </div>
+        <canvas id="camera-canvas" style="display:none;"></canvas>
+      </div>
+      <div class="camera-control-bar">
+        <button type="button" class="btn btn-reset" id="btn-flip-camera" title="Flip front / rear camera">
+          <span>🔄</span> Flip Lens
+        </button>
+        <button type="button" class="shutter-button-3d" id="btn-shutter-snap" title="Capture Live Photo">
+          <div class="shutter-inner-ring"></div>
+        </button>
+        <button type="button" class="btn btn-cancel" id="btn-cancel-camera">Cancel</button>
       </div>
     </div>
   </div>

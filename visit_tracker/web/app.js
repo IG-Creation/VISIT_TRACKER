@@ -56,6 +56,11 @@ const EMBEDDED_HIERARCHY = {
   }
 };
 
+const DEMO_PHOTO_CUST = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'><rect width='400' height='300' fill='%230284c7'/><circle cx='200' cy='120' r='55' fill='white'/><path d='M100 260 c0 -60 50 -80 100 -80 s100 20 100 80' fill='white'/><text x='200' y='285' font-size='14' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>VERIFIED CUSTOMER FIELD PROOF</text></svg>";
+const DEMO_PHOTO_BIZ = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'><rect width='400' height='300' fill='%23059669'/><rect x='80' y='60' width='240' height='160' rx='10' fill='white'/><path d='M150 140 h100 v50 h-100 z' fill='%23059669'/><text x='200' y='265' font-size='14' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>BUSINESS PREMISES VERIFIED</text></svg>";
+const DEMO_PHOTO_DSA = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'><rect width='400' height='300' fill='%232563eb'/><rect x='90' y='70' width='220' height='150' rx='8' fill='white'/><circle cx='200' cy='130' r='35' fill='%232563eb'/><text x='200' y='265' font-size='14' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>DSA PARTNER OFFICE PROOF</text></svg>";
+const DEMO_PHOTO_CON = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'><rect width='400' height='300' fill='%239333ea'/><rect x='90' y='70' width='220' height='150' rx='8' fill='white'/><path d='M160 120 l40 40 l60 -60' stroke='%239333ea' stroke-width='16' fill='none'/><text x='200' y='265' font-size='14' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>CONNECTOR VISIT VERIFIED</text></svg>";
+
 const INITIAL_DEMO_VISITS = [
   {
     id: 1,
@@ -79,6 +84,7 @@ const INITIAL_DEMO_VISITS = [
     latitude: 26.1209,
     longitude: 85.3647,
     location_timestamp: `${new Date().toISOString().split("T")[0]} 11:30:00`,
+    photo_data: DEMO_PHOTO_CUST,
     status: "Logged",
     notes: "Verified loan document copy",
     created_at: `${new Date().toISOString().split("T")[0]} 11:32:00`
@@ -102,6 +108,7 @@ const INITIAL_DEMO_VISITS = [
     latitude: 26.1220,
     longitude: 85.3680,
     location_timestamp: `${new Date().toISOString().split("T")[0]} 12:45:00`,
+    photo_data: DEMO_PHOTO_BIZ,
     status: "Verified",
     notes: "Business functioning normally",
     created_at: `${new Date().toISOString().split("T")[0]} 12:48:00`
@@ -126,6 +133,7 @@ const INITIAL_DEMO_VISITS = [
     latitude: 26.9124,
     longitude: 75.7873,
     location_timestamp: `${new Date().toISOString().split("T")[0]} 14:15:00`,
+    photo_data: DEMO_PHOTO_DSA,
     status: "Logged",
     notes: "New channel partner onboarded",
     created_at: `${new Date().toISOString().split("T")[0]} 14:20:00`
@@ -150,6 +158,7 @@ const INITIAL_DEMO_VISITS = [
     latitude: 26.9150,
     longitude: 75.7910,
     location_timestamp: `${new Date().toISOString().split("T")[0]} 15:40:00`,
+    photo_data: DEMO_PHOTO_CON,
     status: "Completed",
     notes: "Customer file discussed",
     created_at: `${new Date().toISOString().split("T")[0]} 15:45:00`
@@ -170,7 +179,18 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem("VT_STORED_VISITS", JSON.stringify(INITIAL_DEMO_VISITS));
         return INITIAL_DEMO_VISITS;
       }
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      // Ensure demo records have photo_data if missing from earlier cache
+      const updated = parsed.map(v => {
+        if (!v.photo_data) {
+          if (v.visit_type === "Customer Visit") v.photo_data = DEMO_PHOTO_CUST;
+          else if (v.visit_type === "Business Visit") v.photo_data = DEMO_PHOTO_BIZ;
+          else if (v.visit_type === "Partner Visit" && v.sub_type === "DSA visit") v.photo_data = DEMO_PHOTO_DSA;
+          else if (v.visit_type === "Partner Visit" && v.sub_type === "Connector Visit") v.photo_data = DEMO_PHOTO_CON;
+        }
+        return v;
+      });
+      return updated;
     } catch (e) {
       return INITIAL_DEMO_VISITS;
     }
@@ -220,6 +240,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Partner sub-choice buttons & boxes
   const btnPartnerDsa = document.getElementById("btn-partner-dsa");
   const btnPartnerCon = document.getElementById("btn-partner-con");
+  const btnPartnerBoth = document.getElementById("btn-partner-both");
   const statePartnerDsa = document.getElementById("state-partner-dsa");
   const statePartnerCon = document.getElementById("state-partner-con");
   const partnerDsaBox = document.getElementById("partner-dsa-box");
@@ -228,6 +249,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Vendor sub-choice buttons & boxes
   const btnVendorTech = document.getElementById("btn-vendor-tech");
   const btnVendorLegal = document.getElementById("btn-vendor-legal");
+  const btnVendorBoth = document.getElementById("btn-vendor-both");
   const stateVendorTech = document.getElementById("state-vendor-tech");
   const stateVendorLegal = document.getElementById("state-vendor-legal");
   const vendorTechBox = document.getElementById("vendor-tech-box");
@@ -466,6 +488,25 @@ document.addEventListener("DOMContentLoaded", () => {
         if (targetSubSec) {
           targetSubSec.style.display = "block";
           targetSubSec.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+          // Auto-activate primary sub-option if neither is active so fields are immediately visible
+          if (targetId === "subsec-partner") {
+            const hasDsa = btnPartnerDsa && btnPartnerDsa.classList.contains("selected");
+            const hasCon = btnPartnerCon && btnPartnerCon.classList.contains("selected");
+            if (!hasDsa && !hasCon && btnPartnerDsa) {
+              btnPartnerDsa.classList.add("selected");
+              updatePartnerBoxes();
+            }
+          }
+
+          if (targetId === "subsec-vendor") {
+            const hasTech = btnVendorTech && btnVendorTech.classList.contains("selected");
+            const hasLegal = btnVendorLegal && btnVendorLegal.classList.contains("selected");
+            if (!hasTech && !hasLegal && btnVendorTech) {
+              btnVendorTech.classList.add("selected");
+              updateVendorBoxes();
+            }
+          }
         }
       } else {
         if (targetSubSec) {
@@ -485,15 +526,23 @@ document.addEventListener("DOMContentLoaded", () => {
       chk.checked = false;
     });
     container.querySelectorAll(".photo-preview-wrap").forEach(wrap => {
-      wrap.innerHTML = '<span class="photo-empty-text">No photo uploaded</span>';
+      wrap.innerHTML = '<span class="photo-empty-text">No photo captured / uploaded yet</span>';
     });
     container.querySelectorAll(".location-info").forEach(info => {
       info.textContent = "Location not captured yet.";
     });
+    container.querySelectorAll(".sub-choice-btn").forEach(btn => {
+      btn.classList.remove("selected");
+    });
+    container.querySelectorAll(".capture-item").forEach(item => {
+      item.classList.remove("photo-error-highlight");
+    });
+
     // Reset partner inner state if partner section is cleared
     if (container.id === "subsec-partner") {
       if (btnPartnerDsa) btnPartnerDsa.classList.remove("selected");
       if (btnPartnerCon) btnPartnerCon.classList.remove("selected");
+      if (btnPartnerBoth) btnPartnerBoth.classList.remove("selected");
       if (statePartnerDsa) statePartnerDsa.textContent = "⬜";
       if (statePartnerCon) statePartnerCon.textContent = "⬜";
       if (partnerDsaBox) {
@@ -509,6 +558,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (container.id === "subsec-vendor") {
       if (btnVendorTech) btnVendorTech.classList.remove("selected");
       if (btnVendorLegal) btnVendorLegal.classList.remove("selected");
+      if (btnVendorBoth) btnVendorBoth.classList.remove("selected");
       if (stateVendorTech) stateVendorTech.textContent = "⬜";
       if (stateVendorLegal) stateVendorLegal.textContent = "⬜";
       if (vendorTechBox) {
@@ -542,66 +592,288 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Partner Visit: DSA & Connector Sub-choice buttons
+  // ==================== PARTNER SUB-CHOICE LOGIC (DSA, CONNECTOR, BOTH) ====================
+  function updatePartnerBoxes() {
+    const isDsa = btnPartnerDsa && btnPartnerDsa.classList.contains("selected");
+    const isCon = btnPartnerCon && btnPartnerCon.classList.contains("selected");
+    if (statePartnerDsa) statePartnerDsa.textContent = isDsa ? "✓" : "⬜";
+    if (statePartnerCon) statePartnerCon.textContent = isCon ? "✓" : "⬜";
+    if (partnerDsaBox) partnerDsaBox.style.display = isDsa ? "block" : "none";
+    if (partnerConBox) partnerConBox.style.display = isCon ? "block" : "none";
+    if (btnPartnerBoth) {
+      if (isDsa && isCon) {
+        btnPartnerBoth.classList.add("selected");
+      } else {
+        btnPartnerBoth.classList.remove("selected");
+      }
+    }
+  }
+
   if (btnPartnerDsa) {
     btnPartnerDsa.addEventListener("click", () => {
-      const isSelected = btnPartnerDsa.classList.toggle("selected");
-      if (statePartnerDsa) statePartnerDsa.textContent = isSelected ? "✓" : "⬜";
-      partnerDsaBox.style.display = isSelected ? "block" : "none";
-      if (!isSelected) clearSubSectionInputs(partnerDsaBox);
+      btnPartnerDsa.classList.toggle("selected");
+      updatePartnerBoxes();
     });
   }
+
   if (btnPartnerCon) {
     btnPartnerCon.addEventListener("click", () => {
-      const isSelected = btnPartnerCon.classList.toggle("selected");
-      if (statePartnerCon) statePartnerCon.textContent = isSelected ? "✓" : "⬜";
-      partnerConBox.style.display = isSelected ? "block" : "none";
-      if (!isSelected) clearSubSectionInputs(partnerConBox);
+      btnPartnerCon.classList.toggle("selected");
+      updatePartnerBoxes();
     });
   }
 
-  // Vendor Visit: Tech & Legal Sub-choice buttons
+  if (btnPartnerBoth) {
+    btnPartnerBoth.addEventListener("click", () => {
+      const willSelectBoth = !btnPartnerBoth.classList.contains("selected");
+      if (willSelectBoth) {
+        btnPartnerDsa?.classList.add("selected");
+        btnPartnerCon?.classList.add("selected");
+        btnPartnerBoth.classList.add("selected");
+      } else {
+        btnPartnerDsa?.classList.remove("selected");
+        btnPartnerCon?.classList.remove("selected");
+        btnPartnerBoth.classList.remove("selected");
+      }
+      updatePartnerBoxes();
+    });
+  }
+
+  // ==================== VENDOR SUB-CHOICE LOGIC (TECH, LEGAL, BOTH) ====================
+  function updateVendorBoxes() {
+    const isTech = btnVendorTech && btnVendorTech.classList.contains("selected");
+    const isLegal = btnVendorLegal && btnVendorLegal.classList.contains("selected");
+    if (stateVendorTech) stateVendorTech.textContent = isTech ? "✓" : "⬜";
+    if (stateVendorLegal) stateVendorLegal.textContent = isLegal ? "✓" : "⬜";
+    if (vendorTechBox) vendorTechBox.style.display = isTech ? "block" : "none";
+    if (vendorLegalBox) vendorLegalBox.style.display = isLegal ? "block" : "none";
+    if (btnVendorBoth) {
+      if (isTech && isLegal) {
+        btnVendorBoth.classList.add("selected");
+      } else {
+        btnVendorBoth.classList.remove("selected");
+      }
+    }
+  }
+
   if (btnVendorTech) {
     btnVendorTech.addEventListener("click", () => {
-      const isSelected = btnVendorTech.classList.toggle("selected");
-      if (stateVendorTech) stateVendorTech.textContent = isSelected ? "✓" : "⬜";
-      vendorTechBox.style.display = isSelected ? "block" : "none";
-      if (!isSelected) clearSubSectionInputs(vendorTechBox);
+      btnVendorTech.classList.toggle("selected");
+      updateVendorBoxes();
     });
   }
+
   if (btnVendorLegal) {
     btnVendorLegal.addEventListener("click", () => {
-      const isSelected = btnVendorLegal.classList.toggle("selected");
-      if (stateVendorLegal) stateVendorLegal.textContent = isSelected ? "✓" : "⬜";
-      vendorLegalBox.style.display = isSelected ? "block" : "none";
-      if (!isSelected) clearSubSectionInputs(vendorLegalBox);
+      btnVendorLegal.classList.toggle("selected");
+      updateVendorBoxes();
     });
   }
 
-  // ==================== PHOTO & GPS CAPTURE ====================
-  function setupPhotoUpload(inputId, previewId) {
-    const fileInp = document.getElementById(inputId);
-    const prevWrap = document.getElementById(previewId);
-    if (!fileInp || !prevWrap) return;
+  if (btnVendorBoth) {
+    btnVendorBoth.addEventListener("click", () => {
+      const willSelectBoth = !btnVendorBoth.classList.contains("selected");
+      if (willSelectBoth) {
+        btnVendorTech?.classList.add("selected");
+        btnVendorLegal?.classList.add("selected");
+        btnVendorBoth.classList.add("selected");
+      } else {
+        btnVendorTech?.classList.remove("selected");
+        btnVendorLegal?.classList.remove("selected");
+        btnVendorBoth.classList.remove("selected");
+      }
+      updateVendorBoxes();
+    });
+  }
 
-    fileInp.addEventListener("change", () => {
-      const file = fileInp.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        prevWrap.innerHTML = `<img src="${e.target.result}" alt="Proof" style="cursor: pointer;" title="Click to view full">`;
+  // ==================== LIVE CAMERA & PHOTO CAPTURE ENGINE ====================
+  let activeCamPrefix = null;
+  let activeMediaStream = null;
+  let currentFacingMode = "environment";
+
+  const liveCameraModal = document.getElementById("live-camera-modal");
+  const cameraVideo = document.getElementById("camera-stream");
+  const cameraCanvas = document.getElementById("camera-canvas");
+  const btnCloseCamera = document.getElementById("btn-close-camera");
+  const btnCancelCamera = document.getElementById("btn-cancel-camera");
+  const btnFlipCamera = document.getElementById("btn-flip-camera");
+  const btnShutterSnap = document.getElementById("btn-shutter-snap");
+
+  async function startCameraStream(facingMode) {
+    if (activeMediaStream) {
+      activeMediaStream.getTracks().forEach(t => t.stop());
+      activeMediaStream = null;
+    }
+    try {
+      const constraints = {
+        video: {
+          facingMode: { ideal: facingMode },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
       };
-      reader.readAsDataURL(file);
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      activeMediaStream = stream;
+      if (cameraVideo) {
+        cameraVideo.srcObject = stream;
+        cameraVideo.play();
+      }
+      return true;
+    } catch (err) {
+      console.warn("Camera stream access failed:", err);
+      return false;
+    }
+  }
+
+  function stopCameraStream() {
+    if (activeMediaStream) {
+      activeMediaStream.getTracks().forEach(t => t.stop());
+      activeMediaStream = null;
+    }
+    if (cameraVideo) {
+      cameraVideo.srcObject = null;
+    }
+    if (liveCameraModal) {
+      liveCameraModal.style.display = "none";
+    }
+    activeCamPrefix = null;
+  }
+
+  if (btnCloseCamera) btnCloseCamera.addEventListener("click", stopCameraStream);
+  if (btnCancelCamera) btnCancelCamera.addEventListener("click", stopCameraStream);
+
+  if (btnFlipCamera) {
+    btnFlipCamera.addEventListener("click", async () => {
+      currentFacingMode = (currentFacingMode === "environment") ? "user" : "environment";
+      await startCameraStream(currentFacingMode);
     });
   }
 
-  setupPhotoUpload("cust_photo_file", "cust_photo_preview");
-  setupPhotoUpload("dsa_photo_file", "dsa_photo_preview");
-  setupPhotoUpload("con_photo_file", "con_photo_preview");
-  setupPhotoUpload("vtech_photo_file", "vtech_photo_preview");
-  setupPhotoUpload("vlegal_photo_file", "vlegal_photo_preview");
-  setupPhotoUpload("biz_photo_file", "biz_photo_preview");
-  setupPhotoUpload("oth_photo_file", "oth_photo_preview");
+  if (btnShutterSnap) {
+    btnShutterSnap.addEventListener("click", () => {
+      if (!cameraVideo || !activeCamPrefix) return;
+      const width = cameraVideo.videoWidth || 640;
+      const height = cameraVideo.videoHeight || 480;
+      cameraCanvas.width = width;
+      cameraCanvas.height = height;
+      const ctx = cameraCanvas.getContext("2d");
+      ctx.drawImage(cameraVideo, 0, 0, width, height);
+      const dataUrl = cameraCanvas.toDataURL("image/jpeg", 0.85);
+
+      setPhotoDataAndPreview(activeCamPrefix, dataUrl, true);
+      stopCameraStream();
+    });
+  }
+
+  // Setup click triggers for all 7 prefixes
+  const PHOTO_PREFIXES = ["cust", "dsa", "con", "vtech", "vlegal", "biz", "oth"];
+
+  PHOTO_PREFIXES.forEach(prefix => {
+    // 1. Live camera click button
+    const liveBtn = document.querySelector(`.btn-live-snap[data-prefix="${prefix}"]`);
+    const camInp = document.getElementById(`${prefix}_photo_camera`);
+    if (liveBtn) {
+      liveBtn.addEventListener("click", async () => {
+        activeCamPrefix = prefix;
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          liveCameraModal.style.display = "flex";
+          const ok = await startCameraStream(currentFacingMode);
+          if (!ok) {
+            liveCameraModal.style.display = "none";
+            if (camInp) camInp.click();
+          }
+        } else if (camInp) {
+          camInp.click();
+        }
+      });
+    }
+
+    // 2. Mobile native camera file input handler
+    if (camInp) {
+      camInp.addEventListener("change", () => {
+        const file = camInp.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setPhotoDataAndPreview(prefix, e.target.result, true);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // 3. File upload button & file input handler
+    const uploadBtn = document.querySelector(`.btn-upload-trigger[data-prefix="${prefix}"]`);
+    const fileInp = document.getElementById(`${prefix}_photo_file`);
+    if (uploadBtn && fileInp) {
+      uploadBtn.addEventListener("click", () => {
+        fileInp.click();
+      });
+      fileInp.addEventListener("change", () => {
+        const file = fileInp.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setPhotoDataAndPreview(prefix, e.target.result, false);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  });
+
+  function setPhotoDataAndPreview(prefix, dataUrl, isLive) {
+    const hiddenInp = document.getElementById(`${prefix}_photo_data`);
+    const prevWrap = document.getElementById(`${prefix}_photo_preview`);
+    const wrapItem = document.getElementById(`wrap-photo-${prefix}`);
+
+    if (hiddenInp) hiddenInp.value = dataUrl;
+    if (wrapItem) wrapItem.classList.remove("photo-error-highlight");
+
+    if (prevWrap) {
+      prevWrap.innerHTML = `
+        <div class="photo-success-card">
+          <img src="${dataUrl}" alt="Proof" class="preview-img-thumb" style="cursor:pointer;" title="Click to inspect photo">
+          <div class="photo-meta">
+            <span class="photo-verified-badge">${isLive ? "📸 Live Capture" : "📁 Uploaded"} • Verified</span>
+            <button type="button" class="btn-photo-remove" data-prefix="${prefix}">🗑️ Remove / Retake</button>
+          </div>
+        </div>
+      `;
+
+      // Zoom photo modal on click
+      prevWrap.querySelector("img")?.addEventListener("click", () => {
+        openPhotoViewer(dataUrl, `${prefix.toUpperCase()} Photo Proof`);
+      });
+
+      // Retake button
+      prevWrap.querySelector(".btn-photo-remove")?.addEventListener("click", () => {
+        if (hiddenInp) hiddenInp.value = "";
+        const camInp = document.getElementById(`${prefix}_photo_camera`);
+        const fileInp = document.getElementById(`${prefix}_photo_file`);
+        if (camInp) camInp.value = "";
+        if (fileInp) fileInp.value = "";
+        prevWrap.innerHTML = '<span class="photo-empty-text">No photo captured / uploaded yet</span>';
+      });
+    }
+  }
+
+  function openPhotoViewer(src, title) {
+    const modal = document.createElement("div");
+    modal.className = "modal-overlay";
+    modal.style.display = "flex";
+    modal.innerHTML = `
+      <div class="modal-3d" style="max-width: 600px; padding: 1.25rem; text-align: center;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+          <h3 style="font-size:1rem; font-weight:800; color:var(--slate-800);">${title || "Photo Proof"}</h3>
+          <button type="button" class="close-btn" style="font-size:1.5rem;">&times;</button>
+        </div>
+        <img src="${src}" alt="Proof" style="width:100%; max-height:460px; object-fit:contain; border-radius:var(--radius-md);">
+      </div>
+    `;
+    modal.querySelector(".close-btn").addEventListener("click", () => modal.remove());
+    modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
+    document.body.appendChild(modal);
+  }
 
   // Geolocation Capture
   document.querySelectorAll(".btn-loc-capture").forEach(btn => {
@@ -689,6 +961,61 @@ document.addEventListener("DOMContentLoaded", () => {
     const branch = branchSelect.value;
     const visitDate = visitDateInput.value;
 
+    const isDsaSelected = btnPartnerDsa && btnPartnerDsa.classList.contains("selected");
+    const isConSelected = btnPartnerCon && btnPartnerCon.classList.contains("selected");
+    const isTechSelected = btnVendorTech && btnVendorTech.classList.contains("selected");
+    const isLegalSelected = btnVendorLegal && btnVendorLegal.classList.contains("selected");
+
+    // ==================== MANDATORY PHOTO PROOF VALIDATION ====================
+    const missingPhotos = [];
+
+    if (selectedTypes.includes("Customer Visit")) {
+      const p = document.getElementById("cust_photo_data")?.value || document.querySelector("#cust_photo_preview img")?.src;
+      if (!p) missingPhotos.push({ label: "Customer Visit", wrapId: "wrap-photo-cust" });
+    }
+
+    if (selectedTypes.includes("Partner Visit")) {
+      if (isDsaSelected) {
+        const p = document.getElementById("dsa_photo_data")?.value || document.querySelector("#dsa_photo_preview img")?.src;
+        if (!p) missingPhotos.push({ label: "Direct Selling Agent (DSA)", wrapId: "wrap-photo-dsa" });
+      }
+      if (isConSelected) {
+        const p = document.getElementById("con_photo_data")?.value || document.querySelector("#con_photo_preview img")?.src;
+        if (!p) missingPhotos.push({ label: "Connector Partner", wrapId: "wrap-photo-con" });
+      }
+    }
+
+    if (selectedTypes.includes("Vendor Visit")) {
+      if (isTechSelected) {
+        const p = document.getElementById("vtech_photo_data")?.value || document.querySelector("#vtech_photo_preview img")?.src;
+        if (!p) missingPhotos.push({ label: "Technical Vendor", wrapId: "wrap-photo-vtech" });
+      }
+      if (isLegalSelected) {
+        const p = document.getElementById("vlegal_photo_data")?.value || document.querySelector("#vlegal_photo_preview img")?.src;
+        if (!p) missingPhotos.push({ label: "Legal Vendor", wrapId: "wrap-photo-vlegal" });
+      }
+    }
+
+    if (selectedTypes.includes("Business Visit")) {
+      const p = document.getElementById("biz_photo_data")?.value || document.querySelector("#biz_photo_preview img")?.src;
+      if (!p) missingPhotos.push({ label: "Business Visit", wrapId: "wrap-photo-biz" });
+    }
+
+    if (selectedTypes.includes("Other Visit")) {
+      const p = document.getElementById("oth_photo_data")?.value || document.querySelector("#oth_photo_preview img")?.src;
+      if (!p) missingPhotos.push({ label: "Other Visit", wrapId: "wrap-photo-oth" });
+    }
+
+    if (missingPhotos.length > 0) {
+      const first = document.getElementById(missingPhotos[0].wrapId);
+      if (first) {
+        first.classList.add("photo-error-highlight");
+        first.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      alert(`📸 MANDATORY PHOTO REQUIRED!\n\nPlease capture a live photo or upload an image proof for:\n• ${missingPhotos.map(m => m.label).join("\n• ")}`);
+      return;
+    }
+
     const payload = {
       user_role: userRole,
       user_name: userName,
@@ -701,7 +1028,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     if (selectedTypes.includes("Customer Visit")) {
-      const custPhotoImg = document.querySelector("#cust_photo_preview img");
+      const custPhoto = document.getElementById("cust_photo_data")?.value || document.querySelector("#cust_photo_preview img")?.src;
       payload.customer_visit = {
         customer_status: custStatusVal.value,
         id_type: custStatusVal.value === "Existing Customer" ? document.getElementById("cust_id_type").value : null,
@@ -710,7 +1037,7 @@ document.addEventListener("DOMContentLoaded", () => {
         customer_mobile: document.getElementById("cust_mobile").value.trim(),
         reason: document.getElementById("cust_reason").value,
         address: document.getElementById("cust_address").value.trim(),
-        photo_data: custPhotoImg ? custPhotoImg.src : null,
+        photo_data: custPhoto || null,
         latitude: document.getElementById("cust_lat").value || null,
         longitude: document.getElementById("cust_lon").value || null,
         location_timestamp: document.getElementById("cust_loc_ts").value || null,
@@ -718,8 +1045,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (selectedTypes.includes("Partner Visit")) {
-      const isDsaSelected = btnPartnerDsa && btnPartnerDsa.classList.contains("selected");
-      const isConSelected = btnPartnerCon && btnPartnerCon.classList.contains("selected");
       const partnerSubtypes = [];
       if (isDsaSelected) partnerSubtypes.push("DSA visit");
       if (isConSelected) partnerSubtypes.push("Connector Visit");
@@ -729,8 +1054,8 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      const dsaPhoto = document.querySelector("#dsa_photo_preview img");
-      const conPhoto = document.querySelector("#con_photo_preview img");
+      const dsaPhoto = document.getElementById("dsa_photo_data")?.value || document.querySelector("#dsa_photo_preview img")?.src;
+      const conPhoto = document.getElementById("con_photo_data")?.value || document.querySelector("#con_photo_preview img")?.src;
 
       payload.partner_visit = {
         subtypes: partnerSubtypes,
@@ -740,7 +1065,7 @@ document.addEventListener("DOMContentLoaded", () => {
           mobile: document.getElementById("dsa_mobile").value.trim(),
           reason: document.getElementById("dsa_reason").value,
           address: document.getElementById("dsa_address").value.trim(),
-          photo_data: dsaPhoto ? dsaPhoto.src : null,
+          photo_data: dsaPhoto || null,
           latitude: document.getElementById("dsa_lat").value || null,
           longitude: document.getElementById("dsa_lon").value || null,
           location_timestamp: document.getElementById("dsa_loc_ts").value || null,
@@ -751,7 +1076,7 @@ document.addEventListener("DOMContentLoaded", () => {
           mobile: document.getElementById("con_mobile").value.trim(),
           reason: document.getElementById("con_reason").value,
           address: document.getElementById("con_address").value.trim(),
-          photo_data: conPhoto ? conPhoto.src : null,
+          photo_data: conPhoto || null,
           latitude: document.getElementById("con_lat").value || null,
           longitude: document.getElementById("con_lon").value || null,
           location_timestamp: document.getElementById("con_loc_ts").value || null,
@@ -760,8 +1085,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (selectedTypes.includes("Vendor Visit")) {
-      const isTechSelected = btnVendorTech && btnVendorTech.classList.contains("selected");
-      const isLegalSelected = btnVendorLegal && btnVendorLegal.classList.contains("selected");
       const vendorSubtypes = [];
       if (isTechSelected) vendorSubtypes.push("Technical Vendor");
       if (isLegalSelected) vendorSubtypes.push("Legal Vendor");
@@ -771,8 +1094,8 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      const techPhoto = document.querySelector("#vtech_photo_preview img");
-      const legalPhoto = document.querySelector("#vlegal_photo_preview img");
+      const techPhoto = document.getElementById("vtech_photo_data")?.value || document.querySelector("#vtech_photo_preview img")?.src;
+      const legalPhoto = document.getElementById("vlegal_photo_data")?.value || document.querySelector("#vlegal_photo_preview img")?.src;
       const techCodeRaw = document.getElementById("vtech_code_num").value.trim();
       const legalCodeRaw = document.getElementById("vlegal_code_num").value.trim();
 
@@ -784,7 +1107,7 @@ document.addEventListener("DOMContentLoaded", () => {
           mobile: document.getElementById("vtech_mobile").value.trim(),
           reason: document.getElementById("vtech_reason").value,
           address: document.getElementById("vtech_address").value.trim(),
-          photo_data: techPhoto ? techPhoto.src : null,
+          photo_data: techPhoto || null,
           latitude: document.getElementById("vtech_lat").value || null,
           longitude: document.getElementById("vtech_lon").value || null,
           location_timestamp: document.getElementById("vtech_loc_ts").value || null,
@@ -795,7 +1118,7 @@ document.addEventListener("DOMContentLoaded", () => {
           mobile: document.getElementById("vlegal_mobile").value.trim(),
           reason: document.getElementById("vlegal_reason").value,
           address: document.getElementById("vlegal_address").value.trim(),
-          photo_data: legalPhoto ? legalPhoto.src : null,
+          photo_data: legalPhoto || null,
           latitude: document.getElementById("vlegal_lat").value || null,
           longitude: document.getElementById("vlegal_lon").value || null,
           location_timestamp: document.getElementById("vlegal_loc_ts").value || null,
@@ -804,13 +1127,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (selectedTypes.includes("Business Visit")) {
-      const bizPhoto = document.querySelector("#biz_photo_preview img");
+      const bizPhoto = document.getElementById("biz_photo_data")?.value || document.querySelector("#biz_photo_preview img")?.src;
       payload.business_visit = {
         name: document.getElementById("biz_name").value.trim(),
         mobile: document.getElementById("biz_mobile").value.trim(),
         reason: document.getElementById("biz_reason").value,
         address: document.getElementById("biz_address").value.trim(),
-        photo_data: bizPhoto ? bizPhoto.src : null,
+        photo_data: bizPhoto || null,
         latitude: document.getElementById("biz_lat").value || null,
         longitude: document.getElementById("biz_lon").value || null,
         location_timestamp: document.getElementById("biz_loc_ts").value || null,
@@ -818,13 +1141,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (selectedTypes.includes("Other Visit")) {
-      const othPhoto = document.querySelector("#oth_photo_preview img");
+      const othPhoto = document.getElementById("oth_photo_data")?.value || document.querySelector("#oth_photo_preview img")?.src;
       payload.other_visit = {
         name: document.getElementById("oth_name").value.trim(),
         mobile: document.getElementById("oth_mobile").value.trim(),
         reason: document.getElementById("oth_reason").value.trim(),
         address: document.getElementById("oth_address").value.trim(),
-        photo_data: othPhoto ? othPhoto.src : null,
+        photo_data: othPhoto || null,
         latitude: document.getElementById("oth_lat").value || null,
         longitude: document.getElementById("oth_lon").value || null,
         location_timestamp: document.getElementById("oth_loc_ts").value || null,
@@ -1093,6 +1416,21 @@ document.addEventListener("DOMContentLoaded", () => {
       c.style.display = "none";
       clearSubSectionInputs(c);
     });
+
+    // Clear photo data inputs and preview wrappers
+    PHOTO_PREFIXES.forEach(prefix => {
+      const hiddenInp = document.getElementById(`${prefix}_photo_data`);
+      if (hiddenInp) hiddenInp.value = "";
+      const camInp = document.getElementById(`${prefix}_photo_camera`);
+      if (camInp) camInp.value = "";
+      const fileInp = document.getElementById(`${prefix}_photo_file`);
+      if (fileInp) fileInp.value = "";
+      const prevWrap = document.getElementById(`${prefix}_photo_preview`);
+      if (prevWrap) prevWrap.innerHTML = '<span class="photo-empty-text">No photo captured / uploaded yet</span>';
+      const wrap = document.getElementById(`wrap-photo-${prefix}`);
+      if (wrap) wrap.classList.remove("photo-error-highlight");
+    });
+
     if (custStatusToggle) {
       custStatusToggle.querySelectorAll(".segmented-option").forEach(b => {
         if (b.getAttribute("data-val") === "New Customer") {
@@ -1129,28 +1467,79 @@ document.addEventListener("DOMContentLoaded", () => {
     await Promise.all([loadStats(), searchVisits()]);
   }
 
+  // Interactive KPI Metrics Cards Click-To-Filter
+  document.querySelectorAll(".kpi-card-mco").forEach(card => {
+    card.addEventListener("click", () => {
+      document.querySelectorAll(".kpi-card-mco").forEach(c => c.classList.remove("active"));
+      card.classList.add("active");
+      const targetType = card.getAttribute("data-filter-type") || "";
+      if (fltType) {
+        fltType.value = targetType;
+      }
+      searchVisits();
+    });
+  });
+
   async function loadStats() {
+    let total = 0, cust = 0, partner = 0, vendor = 0, biz = 0;
+
     if (!isStandalone) {
       try {
         const res = await fetch("/api/stats");
         const stats = await res.json();
-        kpiTotalVisits.textContent = stats.total_visits || 0;
-        kpiCustVisits.textContent = stats.by_type?.["Customer Visit"] || 0;
-        kpiPartnerVisits.textContent = stats.by_type?.["Partner Visit"] || 0;
-        kpiVendorVisits.textContent = stats.by_type?.["Vendor Visit"] || 0;
-        kpiBizVisits.textContent = (stats.by_type?.["Business Visit"] || 0) + (stats.by_type?.["Other Visit"] || 0);
-        return;
+        total = stats.total_visits || 0;
+        cust = stats.by_type?.["Customer Visit"] || 0;
+        partner = stats.by_type?.["Partner Visit"] || 0;
+        vendor = stats.by_type?.["Vendor Visit"] || 0;
+        biz = (stats.by_type?.["Business Visit"] || 0) + (stats.by_type?.["Other Visit"] || 0);
       } catch (e) {
-        // Fall back to client storage
+        const visits = getLocalVisits();
+        total = visits.length;
+        cust = visits.filter(v => v.visit_type === "Customer Visit").length;
+        partner = visits.filter(v => v.visit_type === "Partner Visit").length;
+        vendor = visits.filter(v => v.visit_type === "Vendor Visit").length;
+        biz = visits.filter(v => v.visit_type === "Business Visit" || v.visit_type === "Other Visit").length;
       }
+    } else {
+      const visits = getLocalVisits();
+      total = visits.length;
+      cust = visits.filter(v => v.visit_type === "Customer Visit").length;
+      partner = visits.filter(v => v.visit_type === "Partner Visit").length;
+      vendor = visits.filter(v => v.visit_type === "Vendor Visit").length;
+      biz = visits.filter(v => v.visit_type === "Business Visit" || v.visit_type === "Other Visit").length;
     }
 
-    const visits = getLocalVisits();
-    kpiTotalVisits.textContent = visits.length;
-    kpiCustVisits.textContent = visits.filter(v => v.visit_type === "Customer Visit").length;
-    kpiPartnerVisits.textContent = visits.filter(v => v.visit_type === "Partner Visit").length;
-    kpiVendorVisits.textContent = visits.filter(v => v.visit_type === "Vendor Visit").length;
-    kpiBizVisits.textContent = visits.filter(v => v.visit_type === "Business Visit" || v.visit_type === "Other Visit").length;
+    if (kpiTotalVisits) kpiTotalVisits.textContent = total;
+    if (kpiCustVisits) kpiCustVisits.textContent = cust;
+    if (kpiPartnerVisits) kpiPartnerVisits.textContent = partner;
+    if (kpiVendorVisits) kpiVendorVisits.textContent = vendor;
+    if (kpiBizVisits) kpiBizVisits.textContent = biz;
+
+    // Percent shares & progress bars for advanced interactive totals
+    const custShare = total > 0 ? Math.round((cust / total) * 100) : 0;
+    const partnerShare = total > 0 ? Math.round((partner / total) * 100) : 0;
+    const vendorShare = total > 0 ? Math.round((vendor / total) * 100) : 0;
+    const bizShare = total > 0 ? Math.round((biz / total) * 100) : 0;
+
+    const elCustShare = document.getElementById("kpi-cust-share");
+    const elCustBar = document.getElementById("kpi-cust-bar");
+    if (elCustShare) elCustShare.textContent = `${custShare}%`;
+    if (elCustBar) elCustBar.style.width = `${custShare}%`;
+
+    const elPartnerShare = document.getElementById("kpi-partner-share");
+    const elPartnerBar = document.getElementById("kpi-partner-bar");
+    if (elPartnerShare) elPartnerShare.textContent = `${partnerShare}%`;
+    if (elPartnerBar) elPartnerBar.style.width = `${partnerShare}%`;
+
+    const elVendorShare = document.getElementById("kpi-vendor-share");
+    const elVendorBar = document.getElementById("kpi-vendor-bar");
+    if (elVendorShare) elVendorShare.textContent = `${vendorShare}%`;
+    if (elVendorBar) elVendorBar.style.width = `${vendorShare}%`;
+
+    const elBizShare = document.getElementById("kpi-biz-share");
+    const elBizBar = document.getElementById("kpi-biz-bar");
+    if (elBizShare) elBizShare.textContent = `${bizShare}%`;
+    if (elBizBar) elBizBar.style.width = `${bizShare}%`;
   }
 
   async function searchVisits() {
@@ -1270,6 +1659,24 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  function formatDateTimeCell(v) {
+    const d = v.visit_date || "-";
+    let t = "";
+    if (v.location_timestamp) {
+      t = v.location_timestamp.includes(" ") ? v.location_timestamp.split(" ")[1] : v.location_timestamp;
+    } else if (v.created_at) {
+      t = v.created_at.includes(" ") ? v.created_at.split(" ")[1] : (v.created_at.includes("T") ? v.created_at.split("T")[1].split(".")[0] : "");
+    }
+    if (!t) t = "11:30:00";
+    return `
+      <div style="font-weight:700; color:var(--slate-800);">${escapeHtml(d)}</div>
+      <div style="font-size:0.72rem; color:var(--slate-500); font-family:monospace; display:flex; align-items:center; gap:3px; margin-top:2px;">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span>${escapeHtml(t)}</span>
+      </div>
+    `;
+  }
+
   function renderVisitsTable(visits) {
     if (!visits || visits.length === 0) {
       visitsTableBody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 2.5rem; color:var(--slate-400);">No visits match current filter criteria.</td></tr>`;
@@ -1296,14 +1703,14 @@ document.addEventListener("DOMContentLoaded", () => {
       let photoDisplay = `<span style="color:var(--slate-400); font-size:0.75rem;">None</span>`;
       if (v.photo_data) {
         photoDisplay = `
-          <img src="${v.photo_data}" alt="Proof" style="width:36px; height:36px; border-radius:6px; object-fit:cover; border:1px solid #cbd5e1; cursor:pointer;" onclick="viewPhotoModal('${v.id}')">
+          <img src="${v.photo_data}" alt="Proof" style="width:36px; height:36px; border-radius:6px; object-fit:cover; border:1px solid #cbd5e1; cursor:pointer;" onclick="openPhotoViewer('${v.photo_data}', '${escapeHtml(v.entity_name)}')">
         `;
       }
 
       return `
         <tr>
           <td><strong>${v.visit_code}</strong></td>
-          <td>${v.visit_date}</td>
+          <td>${formatDateTimeCell(v)}</td>
           <td>
             <strong>${escapeHtml(v.user_name)}</strong>
             <br><span class="badge-role">${v.user_role}</span> <code>${v.user_code}</code>
@@ -1388,7 +1795,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <div>
           <span class="badge-tag-3d">VISIT VOUCHER</span>
           <h2 style="font-size:1.4rem; font-weight:800; color:var(--slate-900);">${v.visit_code}</h2>
-          <small style="color:var(--slate-500);">Logged on ${v.created_at || v.visit_date}</small>
+          <small style="color:var(--slate-500); font-weight:600;">🗓️ Date: ${v.visit_date} &nbsp;•&nbsp; 🕒 Time: ${v.location_timestamp ? (v.location_timestamp.includes(" ") ? v.location_timestamp.split(" ")[1] : v.location_timestamp) : (v.created_at || "11:30:00")}</small>
         </div>
         <div style="text-align:right;">
           <span class="badge-role" style="font-size:0.85rem; padding:0.3rem 0.75rem;">${v.user_role}</span>
@@ -1532,7 +1939,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Client-side CSV generation
     const visits = currentVisits;
     const headers = [
-      "visit_code", "visit_date", "user_role", "user_name", "user_code",
+      "visit_code", "visit_date", "visit_time", "user_role", "user_name", "user_code",
       "state", "cluster", "branch", "visit_type", "sub_type",
       "entity_name", "entity_code", "mobile", "reason", "address",
       "latitude", "longitude", "location_timestamp", "map_url", "status"
@@ -1541,9 +1948,11 @@ document.addEventListener("DOMContentLoaded", () => {
     let csvContent = headers.join(",") + "\n";
     visits.forEach(v => {
       const mapUrl = v.latitude && v.longitude ? `https://www.google.com/maps?q=${v.latitude},${v.longitude}` : "";
+      const visitTime = v.location_timestamp ? (v.location_timestamp.includes(" ") ? v.location_timestamp.split(" ")[1] : v.location_timestamp) : (v.created_at || "11:30:00");
       const row = [
         v.visit_code || "",
         v.visit_date || "",
+        visitTime,
         v.user_role || "",
         `"${(v.user_name || '').replace(/"/g, '""')}"`,
         v.user_code || "",
