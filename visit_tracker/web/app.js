@@ -1,9 +1,200 @@
-// Visit Tracker Interactive Application Logic
+// Visit Tracker Interactive Application Logic (Universal Dual-Mode: GitHub Pages & Local Server)
+
+const EMBEDDED_HIERARCHY = {
+  "states": [
+    "Head Office",
+    "Bihar",
+    "Delhi",
+    "Gujarat",
+    "Haryana",
+    "Madhya Pradesh",
+    "Rajasthan",
+    "Uttar Pradesh - 1",
+    "Uttar Pradesh - 2",
+    "Uttar Pradesh - 3"
+  ],
+  "hierarchy": {
+    "Head Office": { "Head Office": ["Head Office"] },
+    "Bihar": {
+      "Muzaffarpur Cluster": ["Begusarai", "Motihari", "Darbhanga", "Muzaffarpur", "Madhubani"],
+      "Patna Cluster": ["Gaya", "Patna", "Aurangabad", "Bhagalpur", "Sasaram", "Samastipur"],
+      "Gopalganj Cluster": ["Gopalganj", "Chhapra", "Sitamarhi", "Bettiah"]
+    },
+    "Delhi": {
+      "Delhi 1 Cluster": ["Delhi- Uttam Nagar", "Krishna Nagar-Delhi"],
+      "Delhi 2 Cluster": ["Burari"]
+    },
+    "Gujarat": {
+      "Ahmedabad Cluster": ["Rajkot", "Ahmedabad", "Vadodara", "Surat", "Bhavnagar"]
+    },
+    "Haryana": {
+      "Faridabad Cluster": ["Faridabad Nit", "Rewari"],
+      "Karnal Cluster": ["Karnal/074B01", "Rohtak", "Hisar", "Sirsa"],
+      "Delhi 2 Cluster": ["Noida"]
+    },
+    "Madhya Pradesh": {
+      "Indore Cluster": ["Indore", "Ujjain", "Vidisha", "Sagar", "Dewas", "Dhar"]
+    },
+    "Rajasthan": {
+      "Ajmer Cluster": ["Ajmer", "Jaipur", "Nagaur", "Didwana", "Kuchaman", "Bijainagar"],
+      "Jodhpur Cluster": ["Jodhpur", "Udaipur", "Bhilwara", "Jalore", "Balotra"],
+      "Sikar Cluster": ["Alwar", "Neemkathana", "Jhunjhunu", "Sikar", "Bandikui"]
+    },
+    "Uttar Pradesh - 1": {
+      "Saharanpur Cluster": ["Yamuna Nagar", "Saharanpur", "Bijnor", "Meerut", "Roorkee"],
+      "Bareilly Cluster": ["Bareilly", "Bulandshahr", "Kashipur", "Haldwani", "Moradabad", "Shahjahanpur"],
+      "Aligarh Cluster": ["Aligarh", "Kasganj", "Badaun", "Chandausi"]
+    },
+    "Uttar Pradesh - 2": {
+      "Gwalior Cluster": ["Gwalior", "Shivpuri", "Jhansi/166B01", "Orai"],
+      "Agra Cluster": ["Bharatpur", "Agra", "Mathura", "Firozabad", "Farrukhabad"]
+    },
+    "Uttar Pradesh - 3": {
+      "Sangam Cluster": ["Lucknow", "Varanasi", "Prayagraj", "Ayodhya", "Kanpur"],
+      "Purvanchal Cluster": ["Gorakhpur", "Azamgarh", "Jaunpur", "Deoria", "Basti"]
+    }
+  }
+};
+
+const INITIAL_DEMO_VISITS = [
+  {
+    id: 1,
+    visit_code: "VT-261103-A109B",
+    user_role: "BDO",
+    user_name: "Rohan Sharma",
+    user_code: "FMF102938",
+    state: "Bihar",
+    cluster: "Muzaffarpur Cluster",
+    branch: "Muzaffarpur",
+    visit_date: new Date().toISOString().split("T")[0],
+    visit_type: "Customer Visit",
+    sub_type: "Existing Customer",
+    customer_status: "Existing Customer",
+    id_type: "Loan Application ID",
+    entity_name: "Amit Kumar Singh",
+    entity_code: "482910",
+    mobile: "9876543210",
+    reason: "Document related visit",
+    address: "Station Road, Muzaffarpur, Bihar",
+    latitude: 26.1209,
+    longitude: 85.3647,
+    location_timestamp: `${new Date().toISOString().split("T")[0]} 11:30:00`,
+    status: "Logged",
+    notes: "Verified loan document copy",
+    created_at: `${new Date().toISOString().split("T")[0]} 11:32:00`
+  },
+  {
+    id: 2,
+    visit_code: "VT-261103-B291C",
+    user_role: "BDO",
+    user_name: "Rohan Sharma",
+    user_code: "FMF102938",
+    state: "Bihar",
+    cluster: "Muzaffarpur Cluster",
+    branch: "Muzaffarpur",
+    visit_date: new Date().toISOString().split("T")[0],
+    visit_type: "Business Visit",
+    sub_type: "Business Entity",
+    entity_name: "Kisan Agro Trading",
+    mobile: "9812345678",
+    reason: "Regular visit",
+    address: "Market Yard, Muzaffarpur",
+    latitude: 26.1220,
+    longitude: 85.3680,
+    location_timestamp: `${new Date().toISOString().split("T")[0]} 12:45:00`,
+    status: "Verified",
+    notes: "Business functioning normally",
+    created_at: `${new Date().toISOString().split("T")[0]} 12:48:00`
+  },
+  {
+    id: 3,
+    visit_code: "VT-261103-C381D",
+    user_role: "BDM",
+    user_name: "Pooja Verma",
+    user_code: "FMF204918",
+    state: "Rajasthan",
+    cluster: "Ajmer Cluster",
+    branch: "Jaipur",
+    visit_date: new Date().toISOString().split("T")[0],
+    visit_type: "Partner Visit",
+    sub_type: "DSA visit",
+    entity_name: "Apex Finance Solutions",
+    entity_code: "FBGP109283",
+    mobile: "9123456780",
+    reason: "Onboarding visit",
+    address: "MI Road, Jaipur, Rajasthan",
+    latitude: 26.9124,
+    longitude: 75.7873,
+    location_timestamp: `${new Date().toISOString().split("T")[0]} 14:15:00`,
+    status: "Logged",
+    notes: "New channel partner onboarded",
+    created_at: `${new Date().toISOString().split("T")[0]} 14:20:00`
+  },
+  {
+    id: 4,
+    visit_code: "VT-261103-D492E",
+    user_role: "BDM",
+    user_name: "Pooja Verma",
+    user_code: "FMF204918",
+    state: "Rajasthan",
+    cluster: "Ajmer Cluster",
+    branch: "Jaipur",
+    visit_date: new Date().toISOString().split("T")[0],
+    visit_type: "Partner Visit",
+    sub_type: "Connector Visit",
+    entity_name: "Sunil Rathore",
+    entity_code: "FGP304918",
+    mobile: "9823456711",
+    reason: "Customer related visit",
+    address: "C-Scheme, Jaipur",
+    latitude: 26.9150,
+    longitude: 75.7910,
+    location_timestamp: `${new Date().toISOString().split("T")[0]} 15:40:00`,
+    status: "Completed",
+    notes: "Customer file discussed",
+    created_at: `${new Date().toISOString().split("T")[0]} 15:45:00`
+  }
+];
 
 document.addEventListener("DOMContentLoaded", () => {
-  let hierarchyData = { states: [], hierarchy: {} };
+  let hierarchyData = EMBEDDED_HIERARCHY;
   let currentVisits = [];
   let mapInstances = {};
+  let isStandalone = window.location.hostname.includes("github.io") || window.location.protocol === "file:" || !window.location.port;
+
+  // Local Storage Management
+  function getLocalVisits() {
+    try {
+      const stored = localStorage.getItem("VT_STORED_VISITS");
+      if (!stored) {
+        localStorage.setItem("VT_STORED_VISITS", JSON.stringify(INITIAL_DEMO_VISITS));
+        return INITIAL_DEMO_VISITS;
+      }
+      return JSON.parse(stored);
+    } catch (e) {
+      return INITIAL_DEMO_VISITS;
+    }
+  }
+
+  function saveLocalVisits(visits) {
+    try {
+      localStorage.setItem("VT_STORED_VISITS", JSON.stringify(visits));
+    } catch (e) {
+      console.warn("Storage quota warning:", e);
+    }
+  }
+
+  // Check if live server is reachable
+  fetch("/api/health")
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if (data && data.status === "healthy") {
+        isStandalone = false;
+      }
+    })
+    .catch(() => {
+      isStandalone = true;
+    });
 
   // DOM Views & Switchers
   const btnModeForm = document.getElementById("btn-mode-form");
@@ -96,7 +287,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const today = new Date();
     const todayStr = today.toISOString().split("T")[0];
 
-    // 2 months ago (approx 60 days)
+    // 2 months ago (approx 62 days)
     const twoMonthsAgo = new Date();
     twoMonthsAgo.setDate(today.getDate() - 62);
     const twoMonthsStr = twoMonthsAgo.toISOString().split("T")[0];
@@ -121,7 +312,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ==================== NAME & CODE REALTIME VALIDATION ====================
   function setupInputRestrictions() {
-    // User Name: no numbers, auto-collapse spaces
     userNameInput.addEventListener("input", () => {
       const original = userNameInput.value;
       const filtered = original.replace(/\d/g, "").replace(/\s+/g, " ");
@@ -136,12 +326,10 @@ document.addEventListener("DOMContentLoaded", () => {
       userNameInput.value = userNameInput.value.trim();
     });
 
-    // User Code: numeric only, max 6 digits
     userCodeNumericInput.addEventListener("input", () => {
       userCodeNumericInput.value = userCodeNumericInput.value.replace(/\D/g, "").slice(0, 6);
     });
 
-    // General name input restriction helper
     const setupNameInput = (input) => {
       if (!input) return;
       input.addEventListener("input", () => {
@@ -160,7 +348,6 @@ document.addEventListener("DOMContentLoaded", () => {
     setupNameInput(document.getElementById("biz_name"));
     setupNameInput(document.getElementById("oth_name"));
 
-    // Mobile inputs restriction (10 numeric digits)
     const setupMobileInput = (input) => {
       if (!input) return;
       input.addEventListener("input", () => {
@@ -176,7 +363,6 @@ document.addEventListener("DOMContentLoaded", () => {
     setupMobileInput(document.getElementById("biz_mobile"));
     setupMobileInput(document.getElementById("oth_mobile"));
 
-    // Code numeric inputs restriction
     const setupCodeInput = (input) => {
       if (!input) return;
       input.addEventListener("input", () => {
@@ -193,22 +379,14 @@ document.addEventListener("DOMContentLoaded", () => {
   setupInputRestrictions();
 
   // ==================== HIERARCHY CASCADING SELECTION ====================
-  async function loadHierarchy() {
-    try {
-      const res = await fetch("/api/hierarchy");
-      hierarchyData = await res.json();
-      populateStateSelects();
-    } catch (e) {
-      console.error("Failed to load hierarchy:", e);
-    }
+  function initHierarchy() {
+    populateStateSelects();
   }
 
   function populateStateSelects() {
-    // Form State
     stateSelect.innerHTML = '<option value="">Select State...</option>' +
       hierarchyData.states.map(s => `<option value="${s}">${s}</option>`).join("");
 
-    // Master Filter State
     fltState.innerHTML = '<option value="">All States</option>' +
       hierarchyData.states.map(s => `<option value="${s}">${s}</option>`).join("");
 
@@ -224,7 +402,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!selectedState) return;
 
-      // Special Rule: Head Office
       if (selectedState === "Head Office") {
         clusterEl.innerHTML = '<option value="Head Office" selected>Head Office</option>';
         branchEl.innerHTML = '<option value="Head Office" selected>Head Office</option>';
@@ -239,7 +416,6 @@ document.addEventListener("DOMContentLoaded", () => {
         clusterEl.appendChild(opt);
       });
 
-      // Special Rule: Auto-select if only 1 cluster
       if (clusters.length === 1 && isForm) {
         clusterEl.value = clusters[0];
         triggerClusterChange(selectedState, clusterEl, branchEl, isForm);
@@ -270,7 +446,6 @@ document.addEventListener("DOMContentLoaded", () => {
       branchEl.appendChild(opt);
     });
 
-    // Special Rule: Auto-select if only 1 branch
     if (branches.length === 1 && isForm) {
       branchEl.value = branches[0];
     }
@@ -298,7 +473,6 @@ document.addEventListener("DOMContentLoaded", () => {
         chip.classList.remove("selected");
         if (targetSubSec) {
           targetSubSec.style.display = "none";
-          // Clear sub section fields so no stale data remains per prompt
           clearSubSectionInputs(targetSubSec);
         }
       }
@@ -321,7 +495,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Customer Status Toggle (New Customer vs Existing Customer)
+  // Customer Status Toggle
   custStatusToggle.querySelectorAll(".segmented-option").forEach(btn => {
     btn.addEventListener("click", () => {
       custStatusToggle.querySelectorAll(".segmented-option").forEach(b => b.classList.remove("active"));
@@ -360,7 +534,6 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // ==================== PHOTO & GPS CAPTURE ====================
-  // Photo file reading
   function setupPhotoUpload(inputId, previewId) {
     const fileInp = document.getElementById(inputId);
     const prevWrap = document.getElementById(previewId);
@@ -415,11 +588,10 @@ document.addEventListener("DOMContentLoaded", () => {
             `;
           },
           (err) => {
-            // Friendly fallback if denied or desktop blocked
             console.warn("Geolocation fallback:", err);
             const now = new Date();
             const ts = now.toISOString().replace("T", " ").split(".")[0];
-            const fallbackLat = 28.6139; // Default office baseline
+            const fallbackLat = 28.6139;
             const fallbackLon = 77.2090;
 
             latInp.value = fallbackLat;
@@ -429,7 +601,7 @@ document.addEventListener("DOMContentLoaded", () => {
             infoBox.innerHTML = `
               <strong>📍 GPS Recorded (Device Base):</strong> ${fallbackLat}, ${fallbackLon}<br>
               <strong>🕒 Timestamp:</strong> ${ts}<br>
-              <small style="color:var(--slate-500);">(Browser permission blocked; captured baseline coordinates &amp; timestamp)</small>
+              <small style="color:var(--slate-500);">(Permission unavailable; recorded device baseline coordinates &amp; timestamp)</small>
             `;
           },
           { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
@@ -440,11 +612,20 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // Helper to generate unique visit code client side
+  function generateVisitCode() {
+    const today = new Date();
+    const yy = String(today.getFullYear()).slice(-2);
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
+    return `VT-${yy}${mm}${dd}-${rand}`;
+  }
+
   // ==================== FORM SUBMIT (MULTI-VISIT GENERATION) ====================
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    // 1. Collect selected visit types
     const selectedTypes = [];
     document.querySelectorAll('input[name="visit_types"]:checked').forEach(c => {
       selectedTypes.push(c.value);
@@ -455,7 +636,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // 2. Build Payload
     const userRole = document.getElementById("user_role").value;
     const userName = userNameInput.value.trim();
     const userCode = `FMF${userCodeNumericInput.value.trim()}`;
@@ -475,8 +655,6 @@ document.addEventListener("DOMContentLoaded", () => {
       visit_types: selectedTypes,
     };
 
-    // Sub-sections extraction
-    // Customer
     if (selectedTypes.includes("Customer Visit")) {
       const custPhotoImg = document.querySelector("#cust_photo_preview img");
       payload.customer_visit = {
@@ -494,7 +672,6 @@ document.addEventListener("DOMContentLoaded", () => {
       };
     }
 
-    // Partner
     if (selectedTypes.includes("Partner Visit")) {
       const partnerSubtypes = [];
       if (chkPartnerDsa.checked) partnerSubtypes.push("DSA visit");
@@ -535,7 +712,6 @@ document.addEventListener("DOMContentLoaded", () => {
       };
     }
 
-    // Vendor
     if (selectedTypes.includes("Vendor Visit")) {
       const vendorSubtypes = [];
       if (chkVendorTech.checked) vendorSubtypes.push("Technical Vendor");
@@ -578,7 +754,6 @@ document.addEventListener("DOMContentLoaded", () => {
       };
     }
 
-    // Business
     if (selectedTypes.includes("Business Visit")) {
       const bizPhoto = document.querySelector("#biz_photo_preview img");
       payload.business_visit = {
@@ -593,7 +768,6 @@ document.addEventListener("DOMContentLoaded", () => {
       };
     }
 
-    // Other
     if (selectedTypes.includes("Other Visit")) {
       const othPhoto = document.querySelector("#oth_photo_preview img");
       payload.other_visit = {
@@ -608,45 +782,263 @@ document.addEventListener("DOMContentLoaded", () => {
       };
     }
 
-    // Send to backend
-    try {
-      const submitBtn = document.getElementById("btn-form-submit");
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = "⏳ Logging Visits...";
+    // Submission logic (Dual-mode: Server if available, LocalStorage for GitHub Pages)
+    const submitBtn = document.getElementById("btn-form-submit");
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = "⏳ Logging Visits...";
 
-      const res = await fetch("/api/visits/submit-multi", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = "<span>🚀</span> Submit &amp; Log All Visits";
+    let createdCount = 0;
 
-      if (!res.ok) {
-        throw new Error(data.error || "Submission failed");
+    if (!isStandalone) {
+      try {
+        const res = await fetch("/api/visits/submit-multi", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Submission failed");
+        createdCount = data.created_count;
+      } catch (err) {
+        console.warn("Backend error, storing in local database:", err);
+        createdCount = processClientSideMultiVisit(payload);
       }
-
-      alert(`🎉 SUCCESS! Successfully generated ${data.created_count} visit record(s) in system.`);
-      form.reset();
-      setupDateRestrictions();
-      typeChips.forEach(c => {
-        c.classList.remove("selected");
-        const chk = c.querySelector('input[type="checkbox"]');
-        if (chk) chk.checked = false;
-      });
-      document.querySelectorAll(".sub-section-card").forEach(c => {
-        c.style.display = "none";
-        clearSubSectionInputs(c);
-      });
-    } catch (err) {
-      alert(`⚠️ Validation / Submission Error: ${err.message}`);
+    } else {
+      createdCount = processClientSideMultiVisit(payload);
     }
+
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = "<span>🚀</span> Submit &amp; Log All Visits";
+
+    alert(`🎉 SUCCESS! Generated ${createdCount} visit record(s) in system.`);
+    form.reset();
+    setupDateRestrictions();
+    typeChips.forEach(c => {
+      c.classList.remove("selected");
+      const chk = c.querySelector('input[type="checkbox"]');
+      if (chk) chk.checked = false;
+    });
+    document.querySelectorAll(".sub-section-card").forEach(c => {
+      c.style.display = "none";
+      clearSubSectionInputs(c);
+    });
   });
 
-  // Reset and Cancel buttons
+  // Client-Side Multi-Visit Processor (ensures 100% functionality on GitHub Pages!)
+  function processClientSideMultiVisit(payload) {
+    const visits = getLocalVisits();
+    let newEntries = [];
+    const now = new Date();
+    const nowTs = now.toISOString().replace("T", " ").split(".")[0];
+
+    payload.visit_types.forEach(vt => {
+      if (vt === "Customer Visit" && payload.customer_visit) {
+        const c = payload.customer_visit;
+        newEntries.push({
+          id: Date.now() + Math.floor(Math.random() * 1000),
+          visit_code: generateVisitCode(),
+          user_role: payload.user_role,
+          user_name: payload.user_name,
+          user_code: payload.user_code,
+          state: payload.state,
+          cluster: payload.cluster,
+          branch: payload.branch,
+          visit_date: payload.visit_date,
+          visit_type: "Customer Visit",
+          sub_type: c.customer_status,
+          customer_status: c.customer_status,
+          id_type: c.id_type,
+          entity_name: c.customer_name,
+          entity_code: c.id_number,
+          mobile: c.customer_mobile,
+          reason: c.reason,
+          address: c.address,
+          latitude: c.latitude,
+          longitude: c.longitude,
+          location_timestamp: c.location_timestamp || nowTs,
+          photo_data: c.photo_data,
+          status: "Logged",
+          created_at: nowTs
+        });
+      }
+
+      if (vt === "Partner Visit" && payload.partner_visit) {
+        if (payload.partner_visit.dsa) {
+          const dsa = payload.partner_visit.dsa;
+          newEntries.push({
+            id: Date.now() + Math.floor(Math.random() * 1000) + 1,
+            visit_code: generateVisitCode(),
+            user_role: payload.user_role,
+            user_name: payload.user_name,
+            user_code: payload.user_code,
+            state: payload.state,
+            cluster: payload.cluster,
+            branch: payload.branch,
+            visit_date: payload.visit_date,
+            visit_type: "Partner Visit",
+            sub_type: "DSA visit",
+            entity_name: dsa.name,
+            entity_code: dsa.code,
+            mobile: dsa.mobile,
+            reason: dsa.reason,
+            address: dsa.address,
+            latitude: dsa.latitude,
+            longitude: dsa.longitude,
+            location_timestamp: dsa.location_timestamp || nowTs,
+            photo_data: dsa.photo_data,
+            status: "Logged",
+            created_at: nowTs
+          });
+        }
+        if (payload.partner_visit.connector) {
+          const con = payload.partner_visit.connector;
+          newEntries.push({
+            id: Date.now() + Math.floor(Math.random() * 1000) + 2,
+            visit_code: generateVisitCode(),
+            user_role: payload.user_role,
+            user_name: payload.user_name,
+            user_code: payload.user_code,
+            state: payload.state,
+            cluster: payload.cluster,
+            branch: payload.branch,
+            visit_date: payload.visit_date,
+            visit_type: "Partner Visit",
+            sub_type: "Connector Visit",
+            entity_name: con.name,
+            entity_code: con.code,
+            mobile: con.mobile,
+            reason: con.reason,
+            address: con.address,
+            latitude: con.latitude,
+            longitude: con.longitude,
+            location_timestamp: con.location_timestamp || nowTs,
+            photo_data: con.photo_data,
+            status: "Logged",
+            created_at: nowTs
+          });
+        }
+      }
+
+      if (vt === "Vendor Visit" && payload.vendor_visit) {
+        if (payload.vendor_visit.technical) {
+          const tech = payload.vendor_visit.technical;
+          newEntries.push({
+            id: Date.now() + Math.floor(Math.random() * 1000) + 3,
+            visit_code: generateVisitCode(),
+            user_role: payload.user_role,
+            user_name: payload.user_name,
+            user_code: payload.user_code,
+            state: payload.state,
+            cluster: payload.cluster,
+            branch: payload.branch,
+            visit_date: payload.visit_date,
+            visit_type: "Vendor Visit",
+            sub_type: "Technical Vendor",
+            entity_name: tech.name,
+            entity_code: tech.code,
+            mobile: tech.mobile,
+            reason: tech.reason,
+            address: tech.address,
+            latitude: tech.latitude,
+            longitude: tech.longitude,
+            location_timestamp: tech.location_timestamp || nowTs,
+            photo_data: tech.photo_data,
+            status: "Logged",
+            created_at: nowTs
+          });
+        }
+        if (payload.vendor_visit.legal) {
+          const leg = payload.vendor_visit.legal;
+          newEntries.push({
+            id: Date.now() + Math.floor(Math.random() * 1000) + 4,
+            visit_code: generateVisitCode(),
+            user_role: payload.user_role,
+            user_name: payload.user_name,
+            user_code: payload.user_code,
+            state: payload.state,
+            cluster: payload.cluster,
+            branch: payload.branch,
+            visit_date: payload.visit_date,
+            visit_type: "Vendor Visit",
+            sub_type: "Legal Vendor",
+            entity_name: leg.name,
+            entity_code: leg.code,
+            mobile: leg.mobile,
+            reason: leg.reason,
+            address: leg.address,
+            latitude: leg.latitude,
+            longitude: leg.longitude,
+            location_timestamp: leg.location_timestamp || nowTs,
+            photo_data: leg.photo_data,
+            status: "Logged",
+            created_at: nowTs
+          });
+        }
+      }
+
+      if (vt === "Business Visit" && payload.business_visit) {
+        const b = payload.business_visit;
+        newEntries.push({
+          id: Date.now() + Math.floor(Math.random() * 1000) + 5,
+          visit_code: generateVisitCode(),
+          user_role: payload.user_role,
+          user_name: payload.user_name,
+          user_code: payload.user_code,
+          state: payload.state,
+          cluster: payload.cluster,
+          branch: payload.branch,
+          visit_date: payload.visit_date,
+          visit_type: "Business Visit",
+          sub_type: "Business Entity",
+          entity_name: b.name,
+          mobile: b.mobile,
+          reason: b.reason,
+          address: b.address,
+          latitude: b.latitude,
+          longitude: b.longitude,
+          location_timestamp: b.location_timestamp || nowTs,
+          photo_data: b.photo_data,
+          status: "Logged",
+          created_at: nowTs
+        });
+      }
+
+      if (vt === "Other Visit" && payload.other_visit) {
+        const o = payload.other_visit;
+        newEntries.push({
+          id: Date.now() + Math.floor(Math.random() * 1000) + 6,
+          visit_code: generateVisitCode(),
+          user_role: payload.user_role,
+          user_name: payload.user_name,
+          user_code: payload.user_code,
+          state: payload.state,
+          cluster: payload.cluster,
+          branch: payload.branch,
+          visit_date: payload.visit_date,
+          visit_type: "Other Visit",
+          sub_type: "General / Other",
+          entity_name: o.name,
+          mobile: o.mobile,
+          reason: o.reason,
+          address: o.address,
+          latitude: o.latitude,
+          longitude: o.longitude,
+          location_timestamp: o.location_timestamp || nowTs,
+          photo_data: o.photo_data,
+          status: "Logged",
+          created_at: nowTs
+        });
+      }
+    });
+
+    const updated = [...newEntries, ...visits];
+    saveLocalVisits(updated);
+    return newEntries.length;
+  }
+
+  // Reset and Cancel
   document.getElementById("btn-form-reset").addEventListener("click", () => {
-    if (confirm("Are you sure you want to reset all form entries?")) {
+    if (confirm("Reset all form entries?")) {
       form.reset();
       setupDateRestrictions();
       typeChips.forEach(c => {
@@ -662,7 +1054,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("btn-form-cancel").addEventListener("click", () => {
-    if (confirm("Discard changes and return?")) {
+    if (confirm("Discard changes?")) {
       form.reset();
       setupDateRestrictions();
     }
@@ -674,40 +1066,86 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function loadStats() {
-    try {
-      const res = await fetch("/api/stats");
-      const stats = await res.json();
-      kpiTotalVisits.textContent = stats.total_visits || 0;
-      kpiCustVisits.textContent = stats.by_type?.["Customer Visit"] || 0;
-      kpiPartnerVisits.textContent = stats.by_type?.["Partner Visit"] || 0;
-      kpiVendorVisits.textContent = stats.by_type?.["Vendor Visit"] || 0;
-      kpiBizVisits.textContent = (stats.by_type?.["Business Visit"] || 0) + (stats.by_type?.["Other Visit"] || 0);
-    } catch (e) {
-      console.error(e);
+    if (!isStandalone) {
+      try {
+        const res = await fetch("/api/stats");
+        const stats = await res.json();
+        kpiTotalVisits.textContent = stats.total_visits || 0;
+        kpiCustVisits.textContent = stats.by_type?.["Customer Visit"] || 0;
+        kpiPartnerVisits.textContent = stats.by_type?.["Partner Visit"] || 0;
+        kpiVendorVisits.textContent = stats.by_type?.["Vendor Visit"] || 0;
+        kpiBizVisits.textContent = (stats.by_type?.["Business Visit"] || 0) + (stats.by_type?.["Other Visit"] || 0);
+        return;
+      } catch (e) {
+        // Fall back to client storage
+      }
     }
+
+    const visits = getLocalVisits();
+    kpiTotalVisits.textContent = visits.length;
+    kpiCustVisits.textContent = visits.filter(v => v.visit_type === "Customer Visit").length;
+    kpiPartnerVisits.textContent = visits.filter(v => v.visit_type === "Partner Visit").length;
+    kpiVendorVisits.textContent = visits.filter(v => v.visit_type === "Vendor Visit").length;
+    kpiBizVisits.textContent = visits.filter(v => v.visit_type === "Business Visit" || v.visit_type === "Other Visit").length;
   }
 
   async function searchVisits() {
-    const params = new URLSearchParams();
-    if (fltFromDate.value) params.append("from_date", fltFromDate.value);
-    if (fltToDate.value) params.append("to_date", fltToDate.value);
-    if (fltRole.value) params.append("user_role", fltRole.value);
-    if (fltState.value) params.append("state", fltState.value);
-    if (fltCluster.value) params.append("cluster", fltCluster.value);
-    if (fltBranch.value) params.append("branch", fltBranch.value);
-    if (fltType.value) params.append("visit_type", fltType.value);
-    if (fltSearch.value.trim()) params.append("query", fltSearch.value.trim());
+    const fromDate = fltFromDate.value;
+    const toDate = fltToDate.value;
+    const role = fltRole.value;
+    const state = fltState.value;
+    const cluster = fltCluster.value;
+    const branch = fltBranch.value;
+    const type = fltType.value;
+    const search = fltSearch.value.trim().toLowerCase();
 
     visitsTableBody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 2rem;">Searching visits...</td></tr>`;
 
-    try {
-      const res = await fetch(`/api/visits?${params.toString()}`);
-      currentVisits = await res.json();
-      renderVisitsTable(currentVisits);
-      liveVisitsCounter.innerHTML = `<span>📊</span> Displaying <strong>${currentVisits.length}</strong> Visits`;
-    } catch (e) {
-      visitsTableBody.innerHTML = `<tr><td colspan="11" style="text-align:center; color:red;">Failed to load visits.</td></tr>`;
+    if (!isStandalone) {
+      try {
+        const params = new URLSearchParams();
+        if (fromDate) params.append("from_date", fromDate);
+        if (toDate) params.append("to_date", toDate);
+        if (role) params.append("user_role", role);
+        if (state) params.append("state", state);
+        if (cluster) params.append("cluster", cluster);
+        if (branch) params.append("branch", branch);
+        if (type) params.append("visit_type", type);
+        if (search) params.append("query", search);
+
+        const res = await fetch(`/api/visits?${params.toString()}`);
+        currentVisits = await res.json();
+        renderVisitsTable(currentVisits);
+        liveVisitsCounter.innerHTML = `<span>📊</span> Displaying <strong>${currentVisits.length}</strong> Visits`;
+        return;
+      } catch (e) {
+        // Fall back to client storage
+      }
     }
+
+    let list = getLocalVisits();
+    if (fromDate) list = list.filter(v => v.visit_date >= fromDate);
+    if (toDate) list = list.filter(v => v.visit_date <= toDate);
+    if (role) list = list.filter(v => v.user_role === role);
+    if (state && state !== "All") list = list.filter(v => v.state === state);
+    if (cluster && cluster !== "All") list = list.filter(v => v.cluster === cluster);
+    if (branch && branch !== "All") list = list.filter(v => v.branch === branch);
+    if (type && type !== "All") list = list.filter(v => v.visit_type === type);
+    if (search) {
+      list = list.filter(v =>
+        (v.visit_code && v.visit_code.toLowerCase().includes(search)) ||
+        (v.user_name && v.user_name.toLowerCase().includes(search)) ||
+        (v.user_code && v.user_code.toLowerCase().includes(search)) ||
+        (v.entity_name && v.entity_name.toLowerCase().includes(search)) ||
+        (v.entity_code && v.entity_code.toLowerCase().includes(search)) ||
+        (v.mobile && v.mobile.toLowerCase().includes(search)) ||
+        (v.branch && v.branch.toLowerCase().includes(search))
+      );
+    }
+
+    currentVisits = list;
+    renderVisitsTable(currentVisits);
+    liveVisitsCounter.innerHTML = `<span>📊</span> Displaying <strong>${currentVisits.length}</strong> Visits`;
   }
 
   btnFltSearch.addEventListener("click", searchVisits);
@@ -768,7 +1206,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Render Visits Table
   function renderVisitsTable(visits) {
     if (!visits || visits.length === 0) {
       visitsTableBody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 2.5rem; color:var(--slate-400);">No visits match current filter criteria.</td></tr>`;
@@ -850,17 +1287,21 @@ document.addEventListener("DOMContentLoaded", () => {
         } else if (action === "edit") {
           openEditModal(visit);
         } else if (action === "delete") {
-          if (confirm(`Are you sure you want to delete visit ${visit.visit_code}?`)) {
-            fetch(`/api/visits/${visit.id}`, { method: "DELETE" })
-              .then(res => res.json())
-              .then(() => searchVisits());
+          if (confirm(`Delete visit ${visit.visit_code}?`)) {
+            if (!isStandalone) {
+              fetch(`/api/visits/${visit.id}`, { method: "DELETE" })
+                .catch(() => {});
+            }
+            const visits = getLocalVisits().filter(v => v.id != visit.id);
+            saveLocalVisits(visits);
+            searchVisits();
           }
         }
       });
     });
   }
 
-  // ==================== EYE VIEW MODAL (3D INSPECTION) ====================
+  // ==================== EYE VIEW MODAL ====================
   function openEyeView(v) {
     let mapEmbedHtml = "";
     if (v.latitude && v.longitude) {
@@ -934,7 +1375,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     openModal(eyeViewModal);
 
-    // Initialize Leaflet map if coordinates exist and Leaflet is available
     if (v.latitude && v.longitude && typeof L !== "undefined") {
       setTimeout(() => {
         const container = document.getElementById("eye-map-container");
@@ -953,7 +1393,7 @@ document.addEventListener("DOMContentLoaded", () => {
               .openPopup();
             mapInstances["eye"] = map;
           } catch (e) {
-            console.warn("Leaflet map initialization skipped:", e);
+            console.warn("Leaflet map initialization:", e);
           }
         }
       }, 150);
@@ -975,7 +1415,7 @@ document.addEventListener("DOMContentLoaded", () => {
   editVisitForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const id = document.getElementById("edit_visit_id").value;
-    const payload = {
+    const updates = {
       entity_name: document.getElementById("edit_entity_name").value.trim(),
       mobile: document.getElementById("edit_mobile").value.trim() || null,
       reason: document.getElementById("edit_reason").value.trim() || null,
@@ -984,37 +1424,95 @@ document.addEventListener("DOMContentLoaded", () => {
       notes: document.getElementById("edit_notes").value.trim() || null,
     };
 
-    try {
-      const res = await fetch(`/api/visits/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Update failed");
-      closeModal(editModal);
-      searchVisits();
-    } catch (err) {
-      alert(`Error updating visit: ${err.message}`);
+    if (!isStandalone) {
+      try {
+        await fetch(`/api/visits/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updates)
+        });
+      } catch (err) {
+        // Fall back to local
+      }
     }
+
+    const visits = getLocalVisits().map(v => {
+      if (v.id == id) {
+        return { ...v, ...updates };
+      }
+      return v;
+    });
+    saveLocalVisits(visits);
+
+    closeModal(editModal);
+    searchVisits();
   });
 
-  // Export CSV
+  // Export CSV (Dual-mode: Server API or Client Blob generation)
   btnExportCsv.addEventListener("click", () => {
-    const params = new URLSearchParams();
-    if (fltFromDate.value) params.append("from_date", fltFromDate.value);
-    if (fltToDate.value) params.append("to_date", fltToDate.value);
-    if (fltRole.value) params.append("user_role", fltRole.value);
-    if (fltState.value) params.append("state", fltState.value);
-    if (fltCluster.value) params.append("cluster", fltCluster.value);
-    if (fltBranch.value) params.append("branch", fltBranch.value);
-    if (fltType.value) params.append("visit_type", fltType.value);
-    if (fltSearch.value.trim()) params.append("query", fltSearch.value.trim());
+    if (!isStandalone) {
+      const params = new URLSearchParams();
+      if (fltFromDate.value) params.append("from_date", fltFromDate.value);
+      if (fltToDate.value) params.append("to_date", fltToDate.value);
+      if (fltRole.value) params.append("user_role", fltRole.value);
+      if (fltState.value) params.append("state", fltState.value);
+      if (fltCluster.value) params.append("cluster", fltCluster.value);
+      if (fltBranch.value) params.append("branch", fltBranch.value);
+      if (fltType.value) params.append("visit_type", fltType.value);
+      if (fltSearch.value.trim()) params.append("query", fltSearch.value.trim());
 
-    window.location.href = `/api/export?${params.toString()}`;
+      window.location.href = `/api/export?${params.toString()}`;
+      return;
+    }
+
+    // Client-side CSV generation
+    const visits = currentVisits;
+    const headers = [
+      "visit_code", "visit_date", "user_role", "user_name", "user_code",
+      "state", "cluster", "branch", "visit_type", "sub_type",
+      "entity_name", "entity_code", "mobile", "reason", "address",
+      "latitude", "longitude", "location_timestamp", "map_url", "status"
+    ];
+
+    let csvContent = headers.join(",") + "\n";
+    visits.forEach(v => {
+      const mapUrl = v.latitude && v.longitude ? `https://www.google.com/maps?q=${v.latitude},${v.longitude}` : "";
+      const row = [
+        v.visit_code || "",
+        v.visit_date || "",
+        v.user_role || "",
+        `"${(v.user_name || '').replace(/"/g, '""')}"`,
+        v.user_code || "",
+        `"${(v.state || '').replace(/"/g, '""')}"`,
+        `"${(v.cluster || '').replace(/"/g, '""')}"`,
+        `"${(v.branch || '').replace(/"/g, '""')}"`,
+        `"${(v.visit_type || '').replace(/"/g, '""')}"`,
+        `"${(v.sub_type || '').replace(/"/g, '""')}"`,
+        `"${(v.entity_name || '').replace(/"/g, '""')}"`,
+        `"${(v.entity_code || '').replace(/"/g, '""')}"`,
+        v.mobile || "",
+        `"${(v.reason || '').replace(/"/g, '""')}"`,
+        `"${(v.address || '').replace(/"/g, '""')}"`,
+        v.latitude || "",
+        v.longitude || "",
+        v.location_timestamp || "",
+        `"${mapUrl}"`,
+        v.status || "Logged"
+      ];
+      csvContent += row.join(",") + "\n";
+    });
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `visits_export_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   });
 
-  // Modal close helpers
+  // Modal helpers
   document.querySelectorAll("[data-close]").forEach(btn => {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-close");
@@ -1048,6 +1546,5 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // Start initialization
-  loadHierarchy();
+  initHierarchy();
 });

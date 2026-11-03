@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visit Tracker | Interactive Field Logger & Master Dashboard</title>
+  <link rel="stylesheet" href="./styles.css">
+  <!-- Leaflet CSS for rich interactive GPS map preview -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-icon-3d">🏢</div>
+      <div>
+        <div class="brand-title">Visit Tracker</div>
+        <div class="brand-sub">Field Visit Management System</div>
+      </div>
+    </div>
+
+    <!-- Mode Switcher (Normal User vs Master User) -->
+    <div class="mode-switcher">
+      <button id="btn-mode-form" class="mode-btn active" title="Field Officer Entry Form">
+        <span>📝</span> Field Visit Form
+      </button>
+      <button id="btn-mode-dashboard" class="mode-btn" title="Master Control & Analytics">
+        <span>📊</span> Master Dashboard
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Application Wrapper -->
+  <main class="main-wrapper">
+
+    <!-- ========================================== -->
+    <!-- VIEW 1: INTERACTIVE VISIT FORM (FIELD OFFICER) -->
+    <!-- ========================================== -->
+    <section id="view-form">
+      
+      <!-- 3D Hero Card -->
+      <div class="hero-3d-card">
+        <div class="hero-text">
+          <div class="badge-tag-3d">✨ OFFICIAL FIELD LOG</div>
+          <h1>Visit Registration Form</h1>
+          <p>Record, verify, and log field visits with real-time GPS coordinates, timestamps, and photos.</p>
+        </div>
+        <div style="font-size: 3.5rem; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.15));" class="hero-emoji">
+          📋📍
+        </div>
+      </div>
+
+      <form id="visit-main-form" autocomplete="off">
+
+        <!-- SECTION 1: USER DETAILS -->
+        <div class="form-card-3d">
+          <div class="section-header-3d">
+            <div class="section-title">
+              <div class="section-icon-badge">👤</div>
+              <span>User Details Section</span>
+            </div>
+            <span class="badge-tag-3d">Step 1 of 2</span>
+          </div>
+
+          <div class="section-body">
+            <div class="form-grid">
+              
+              <!-- I am a _______ -->
+              <div class="form-group">
+                <label class="form-label" for="user_role">
+                  I am a _______ <span class="req">*</span>
+                </label>
+                <select id="user_role" name="user_role" class="form-select" required>
+                  <option value="">Select Role...</option>
+                  <option value="BDO">BDO (Business Development Officer)</option>
+                  <option value="BDM">BDM (Business Development Manager)</option>
+                  <option value="BPM">BPM (Branch Product Manager)</option>
+                  <option value="BCM">BCM (Branch Credit Manager)</option>
+                  <option value="CCM">CCM (Cluster Credit Manager)</option>
+                  <option value="CBM">CBM (Cluster Business Manager)</option>
+                </select>
+                <span class="field-hint">Select your current designated organizational role</span>
+              </div>
+
+              <!-- Enter Name -->
+              <div class="form-group">
+                <label class="form-label" for="user_name">
+                  Enter Name <span class="req">*</span>
+                </label>
+                <input type="text" id="user_name" name="user_name" class="form-input" placeholder="e.g. Rahul Sharma" required>
+                <span class="field-hint">Numbers not allowed. Extra spaces will be auto-corrected.</span>
+                <span id="err-user-name" class="field-error">Numbers are not allowed in name</span>
+              </div>
+
+              <!-- User Code -->
+              <div class="form-group">
+                <label class="form-label" for="user_code_numeric">
+                  User Code <span class="req">*</span>
+                </label>
+                <div class="input-addon-group">
+                  <span class="input-prefix">FMF</span>
+                  <input type="text" id="user_code_numeric" class="form-input" maxlength="6" inputmode="numeric" placeholder="123456" required>
+                </div>
+                <span class="field-hint">Starts with FMF by default. Only enter numbers (max 6 digits).</span>
+                <span id="err-user-code" class="field-error">Only up to 6 numeric digits allowed</span>
+              </div>
+
+            </div>
+
+            <!-- State, Cluster, Branch Hierarchy Dropdowns -->
+            <div class="form-grid">
+              
+              <!-- State -->
+              <div class="form-group">
+                <label class="form-label" for="state_select">
+                  State <span class="req">*</span>
+                </label>
+                <select id="state_select" name="state" class="form-select" required>
+                  <option value="">Select State...</option>
+                </select>
+                <span class="field-hint">Select Head Office or your operational state</span>
+              </div>
+
+              <!-- Cluster -->
+              <div class="form-group">
+                <label class="form-label" for="cluster_select">
+                  Cluster <span class="req">*</span>
+                </label>
+                <select id="cluster_select" name="cluster" class="form-select" required>
+                  <option value="">Select Cluster...</option>
+                </select>
+                <span class="field-hint">Auto-selected if single cluster in state</span>
+              </div>
+
+              <!-- Branch -->
+              <div class="form-group">
+                <label class="form-label" for="branch_select">
+                  Branch <span class="req">*</span>
+                </label>
+                <select id="branch_select" name="branch" class="form-select" required>
+                  <option value="">Select Branch...</option>
+                </select>
+                <span class="field-hint">Auto-selected if single branch in cluster</span>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 2: VISIT DETAILS -->
+        <div class="form-card-3d">
+          <div class="section-header-3d">
+            <div class="section-title">
+              <div class="section-icon-badge">📅</div>
+              <span>Visit Details Section</span>
+            </div>
+            <span class="badge-tag-3d">Step 2 of 2</span>
+          </div>
+
+          <div class="section-body">
+            
+            <!-- Visit Date -->
+            <div class="form-grid" style="grid-template-columns: 1fr;">
+              <div class="form-group" style="max-width: 380px;">
+                <label class="form-label" for="visit_date">
+                  Visit Date Selection <span class="req">*</span>
+                </label>
+                <input type="date" id="visit_date" name="visit_date" class="form-input" required>
+                <span class="field-hint">Current or past date only (not more than 2 months before).</span>
+                <span id="err-visit-date" class="field-error">Date cannot be in future or older than 2 months</span>
+              </div>
+            </div>
+
+            <!-- Visit Type Multi-select Selection -->
+            <div style="margin-top: 1rem;">
+              <label class="form-label">
+                Select Visit Type(s) <span class="req">*</span> <small style="color:var(--slate-500); font-weight:normal;">(Select one or multiple types to open corresponding detail sections)</small>
+              </label>
+
+              <div class="visit-types-selector">
+                <label class="type-chip" data-target="subsec-customer">
+                  <input type="checkbox" name="visit_types" value="Customer Visit">
+                  <span>🏢</span> Customer Visit
+                </label>
+                <label class="type-chip" data-target="subsec-partner">
+                  <input type="checkbox" name="visit_types" value="Partner Visit">
+                  <span>🤝</span> Partner Visit
+                </label>
+                <label class="type-chip" data-target="subsec-vendor">
+                  <input type="checkbox" name="visit_types" value="Vendor Visit">
+                  <span>🛠️</span> Vendor Visit
+                </label>
+                <label class="type-chip" data-target="subsec-business">
+                  <input type="checkbox" name="visit_types" value="Business Visit">
+                  <span>💼</span> Business Visit
+                </label>
+                <label class="type-chip" data-target="subsec-other">
+                  <input type="checkbox" name="visit_types" value="Other Visit">
+                  <span>🌐</span> Other Visit
+                </label>
+              </div>
+            </div>
+
+            <!-- DYNAMIC SUB SECTIONS ACCORDING TO SELECTIONS -->
+            <div class="sub-sections-wrap">
+
+              <!-- ================= SUB SECTION 1: CUSTOMER VISIT ================= -->
+              <div id="subsec-customer" class="sub-section-card" style="display: none;">
+                <div class="sub-section-header">
+                  <div class="sub-section-title">
+                    <span>🏢</span> Customer Visit Details
+                  </div>
+                  <span class="badge-tag-3d" style="background:#ecfdf5; color:#065f46;">Customer</span>
+                </div>
+
+                <!-- New or Existing Customer -->
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                  <label class="form-label">Is he a New Customer or Existing Customer? <span class="req">*</span></label>
+                  <div class="segmented-control" id="cust-status-toggle">
+                    <button type="button" class="segmented-option active" data-val="New Customer">✨ New Customer</button>
+                    <button type="button" class="segmented-option" data-val="Existing Customer">💼 Existing Customer</button>
+                  </div>
+                  <input type="hidden" id="cust_status_val" value="New Customer">
+                </div>
+
+                <!-- Existing Customer ID Section (Shown if Existing) -->
+                <div id="existing-cust-id-row" class="form-grid" style="display: none; background: #f8fafc; padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--slate-200);">
+                  <div class="form-group">
+                    <label class="form-label" for="cust_id_type">Select ID Type <span class="req">*</span></label>
+                    <select id="cust_id_type" class="form-select">
+                      <option value="Lead ID">Lead ID</option>
+                      <option value="Loan Application ID">Loan Application ID</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="cust_id_number">Enter ID <span class="req">*</span></label>
+                    <input type="text" id="cust_id_number" class="form-input" maxlength="6" inputmode="numeric" placeholder="e.g. 543210">
+                    <span class="field-hint">Only numeric allowed, up to 6 digits.</span>
+                  </div>
+                </div>
+
+                <!-- Customer Details Grid -->
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label" for="cust_name">Customer Name <span class="req">*</span></label>
+                    <input type="text" id="cust_name" class="form-input" placeholder="e.g. Vijay Kumar">
+                    <span class="field-hint">No numbers. Extra spaces auto-corrected.</span>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="cust_mobile">Customer Mobile Number <span class="req">*</span></label>
+                    <input type="tel" id="cust_mobile" class="form-input" maxlength="10" placeholder="10-digit mobile number">
+                    <span class="field-hint">Exactly 10 numeric digits</span>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="cust_reason">Reason for Visit <span class="req">*</span></label>
+                    <select id="cust_reason" class="form-select">
+                      <option value="Onboarding visit">Onboarding visit</option>
+                      <option value="Regular visit">Regular visit</option>
+                      <option value="Document related visit">Document related visit</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="cust_address">Customer Address (Optional)</label>
+                  <textarea id="cust_address" class="form-textarea" rows="2" placeholder="Street, landmark, town/village"></textarea>
+                </div>
+
+                <!-- Photo & Lat/Long Capture -->
+                <div class="capture-box">
+                  <div class="capture-item">
+                    <label class="form-label">📸 Upload Customer Photo / Visit Proof</label>
+                    <input type="file" id="cust_photo_file" accept="image/*" class="form-input" style="padding: 0.35rem;">
+                    <div class="photo-preview-wrap" id="cust_photo_preview">
+                      <span class="photo-empty-text">No photo uploaded yet</span>
+                    </div>
+                  </div>
+                  <div class="capture-item">
+                    <label class="form-label">📍 Capture GPS Lat/Long & Timestamp <span class="req">*</span></label>
+                    <button type="button" class="btn-capture btn-loc-capture" data-prefix="cust">
+                      <span>🎯</span> Capture Current Location
+                    </button>
+                    <div class="location-info" id="cust_loc_display">
+                      Location not captured yet. Click above to record GPS &amp; time.
+                    </div>
+                    <input type="hidden" id="cust_lat">
+                    <input type="hidden" id="cust_lon">
+                    <input type="hidden" id="cust_loc_ts">
+                  </div>
+                </div>
+              </div>
+
+
+              <!-- ================= SUB SECTION 2: PARTNER VISIT ================= -->
+              <div id="subsec-partner" class="sub-section-card" style="display: none;">
+                <div class="sub-section-header">
+                  <div class="sub-section-title">
+                    <span>🤝</span> Partner Visit Details
+                  </div>
+                  <span class="badge-tag-3d" style="background:#eff6ff; color:#1e40af;">Partner</span>
+                </div>
+
+                <!-- Partner Visit Type Multi-Select -->
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                  <label class="form-label">Select Partner Visit Type (You can select both) <span class="req">*</span></label>
+                  <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <label class="type-chip" style="padding: 0.5rem 1rem;">
+                      <input type="checkbox" id="chk-partner-dsa" value="DSA visit">
+                      <span>🏢</span> DSA visit
+                    </label>
+                    <label class="type-chip" style="padding: 0.5rem 1rem;">
+                      <input type="checkbox" id="chk-partner-connector" value="Connector Visit">
+                      <span>🔗</span> Connector Visit
+                    </label>
+                  </div>
+                </div>
+
+                <!-- DSA Fields Box -->
+                <div id="partner-dsa-box" style="display: none; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.5rem;">
+                  <div style="font-weight: 700; color: var(--primary); margin-bottom: 1rem;">🏢 Direct Selling Agent (DSA) Details</div>
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label class="form-label" for="dsa_name">DSA Name <span class="req">*</span></label>
+                      <input type="text" id="dsa_name" class="form-input" placeholder="e.g. Apex Associates">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="dsa_code_num">DSA Code <span class="req">*</span></label>
+                      <div class="input-addon-group">
+                        <span class="input-prefix">FBGP</span>
+                        <input type="text" id="dsa_code_num" class="form-input" maxlength="6" inputmode="numeric" placeholder="102938">
+                      </div>
+                      <span class="field-hint">FBGP auto-freezed. Enter up to 6 digits.</span>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="dsa_mobile">DSA Mobile Number <span class="req">*</span></label>
+                      <input type="tel" id="dsa_mobile" class="form-input" maxlength="10" placeholder="10-digit mobile number">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="dsa_reason">Reason for Visit <span class="req">*</span></label>
+                      <select id="dsa_reason" class="form-select">
+                        <option value="Onboarding visit">Onboarding visit</option>
+                        <option value="Regular visit">Regular visit</option>
+                        <option value="Document related visit">Document related visit</option>
+                        <option value="Customer related visit">Customer related visit</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="dsa_address">DSA Address (Optional)</label>
+                    <textarea id="dsa_address" class="form-textarea" rows="2" placeholder="DSA Office address"></textarea>
+                  </div>
+                  <!-- Photo & Lat/Long Capture for DSA -->
+                  <div class="capture-box">
+                    <div class="capture-item">
+                      <label class="form-label">📸 DSA Photo Proof</label>
+                      <input type="file" id="dsa_photo_file" accept="image/*" class="form-input" style="padding: 0.35rem;">
+                      <div class="photo-preview-wrap" id="dsa_photo_preview">
+                        <span class="photo-empty-text">No photo uploaded</span>
+                      </div>
+                    </div>
+                    <div class="capture-item">
+                      <label class="form-label">📍 Capture DSA GPS Lat/Long &amp; Timestamp <span class="req">*</span></label>
+                      <button type="button" class="btn-capture btn-loc-capture" data-prefix="dsa">
+                        <span>🎯</span> Capture DSA Location
+                      </button>
+                      <div class="location-info" id="dsa_loc_display">Location not captured.</div>
+                      <input type="hidden" id="dsa_lat"><input type="hidden" id="dsa_lon"><input type="hidden" id="dsa_loc_ts">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Connector Fields Box -->
+                <div id="partner-connector-box" style="display: none; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: var(--radius-md); padding: 1.25rem;">
+                  <div style="font-weight: 700; color: #0284c7; margin-bottom: 1rem;">🔗 Connector Details</div>
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label class="form-label" for="con_name">Connector Name <span class="req">*</span></label>
+                      <input type="text" id="con_name" class="form-input" placeholder="e.g. Ramesh Chandra">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="con_code_num">Connector Code <span class="req">*</span></label>
+                      <div class="input-addon-group">
+                        <span class="input-prefix">FGP</span>
+                        <input type="text" id="con_code_num" class="form-input" maxlength="6" inputmode="numeric" placeholder="203948">
+                      </div>
+                      <span class="field-hint">FGP auto-freezed. Enter up to 6 digits.</span>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="con_mobile">Connector Mobile Number <span class="req">*</span></label>
+                      <input type="tel" id="con_mobile" class="form-input" maxlength="10" placeholder="10-digit mobile number">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="con_reason">Reason for Visit <span class="req">*</span></label>
+                      <select id="con_reason" class="form-select">
+                        <option value="Onboarding visit">Onboarding visit</option>
+                        <option value="Regular visit">Regular visit</option>
+                        <option value="Document related visit">Document related visit</option>
+                        <option value="Customer related visit">Customer related visit</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="con_address">Connector Address (Optional)</label>
+                    <textarea id="con_address" class="form-textarea" rows="2" placeholder="Connector Address"></textarea>
+                  </div>
+                  <!-- Photo & Lat/Long Capture for Connector -->
+                  <div class="capture-box">
+                    <div class="capture-item">
+                      <label class="form-label">📸 Connector Photo Proof</label>
+                      <input type="file" id="con_photo_file" accept="image/*" class="form-input" style="padding: 0.35rem;">
+                      <div class="photo-preview-wrap" id="con_photo_preview">
+                        <span class="photo-empty-text">No photo uploaded</span>
+                      </div>
+                    </div>
+                    <div class="capture-item">
+                      <label class="form-label">📍 Capture Connector GPS Lat/Long &amp; Timestamp <span class="req">*</span></label>
+                      <button type="button" class="btn-capture btn-loc-capture" data-prefix="con">
+                        <span>🎯</span> Capture Connector Location
+                      </button>
+                      <div class="location-info" id="con_loc_display">Location not captured.</div>
+                      <input type="hidden" id="con_lat"><input type="hidden" id="con_lon"><input type="hidden" id="con_loc_ts">
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+
+              <!-- ================= SUB SECTION 3: VENDOR VISIT ================= -->
+              <div id="subsec-vendor" class="sub-section-card" style="display: none;">
+                <div class="sub-section-header">
+                  <div class="sub-section-title">
+                    <span>🛠️</span> Vendor Visit Details
+                  </div>
+                  <span class="badge-tag-3d" style="background:#fef3c7; color:#92400e;">Vendor</span>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                  <label class="form-label">Select Vendor Visit Type (You can select both) <span class="req">*</span></label>
+                  <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <label class="type-chip" style="padding: 0.5rem 1rem;">
+                      <input type="checkbox" id="chk-vendor-tech" value="Technical Vendor">
+                      <span>⚙️</span> Technical Vendor
+                    </label>
+                    <label class="type-chip" style="padding: 0.5rem 1rem;">
+                      <input type="checkbox" id="chk-vendor-legal" value="Legal Vendor">
+                      <span>⚖️</span> Legal Vendor
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Technical Vendor Box -->
+                <div id="vendor-tech-box" style="display: none; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.5rem;">
+                  <div style="font-weight: 700; color: #d97706; margin-bottom: 1rem;">⚙️ Technical Vendor Details</div>
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label class="form-label" for="vtech_name">Vendor Name <span class="req">*</span></label>
+                      <input type="text" id="vtech_name" class="form-input" placeholder="e.g. Valuation Tech Engineers">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="vtech_code_num">Vendor Code (Optional)</label>
+                      <div class="input-addon-group">
+                        <span class="input-prefix">V</span>
+                        <input type="text" id="vtech_code_num" class="form-input" maxlength="6" inputmode="numeric" placeholder="102938">
+                      </div>
+                      <span class="field-hint">Auto-prefixed with V. Up to 6 digits.</span>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="vtech_mobile">Mobile Number <span class="req">*</span></label>
+                      <input type="tel" id="vtech_mobile" class="form-input" maxlength="10" placeholder="10-digit mobile number">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="vtech_reason">Reason for Visit <span class="req">*</span></label>
+                      <select id="vtech_reason" class="form-select">
+                        <option value="Onboarding visit">Onboarding visit</option>
+                        <option value="Regular visit">Regular visit</option>
+                        <option value="Document related visit">Document related visit</option>
+                        <option value="Customer related visit">Customer related visit</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="vtech_address">Address (Optional)</label>
+                    <textarea id="vtech_address" class="form-textarea" rows="2"></textarea>
+                  </div>
+                  <!-- Capture for Tech Vendor -->
+                  <div class="capture-box">
+                    <div class="capture-item">
+                      <label class="form-label">📸 Photo Proof</label>
+                      <input type="file" id="vtech_photo_file" accept="image/*" class="form-input" style="padding: 0.35rem;">
+                      <div class="photo-preview-wrap" id="vtech_photo_preview"><span class="photo-empty-text">No photo uploaded</span></div>
+                    </div>
+                    <div class="capture-item">
+                      <label class="form-label">📍 Capture GPS &amp; Timestamp <span class="req">*</span></label>
+                      <button type="button" class="btn-capture btn-loc-capture" data-prefix="vtech"><span>🎯</span> Capture Tech Vendor Location</button>
+                      <div class="location-info" id="vtech_loc_display">Location not captured.</div>
+                      <input type="hidden" id="vtech_lat"><input type="hidden" id="vtech_lon"><input type="hidden" id="vtech_loc_ts">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Legal Vendor Box -->
+                <div id="vendor-legal-box" style="display: none; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: var(--radius-md); padding: 1.25rem;">
+                  <div style="font-weight: 700; color: #b45309; margin-bottom: 1rem;">⚖️ Legal Vendor Details</div>
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label class="form-label" for="vlegal_name">Vendor Name <span class="req">*</span></label>
+                      <input type="text" id="vlegal_name" class="form-input" placeholder="e.g. Legal Associates Chamber">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="vlegal_code_num">Vendor Code (Optional)</label>
+                      <div class="input-addon-group">
+                        <span class="input-prefix">V</span>
+                        <input type="text" id="vlegal_code_num" class="form-input" maxlength="6" inputmode="numeric" placeholder="203948">
+                      </div>
+                      <span class="field-hint">Auto-prefixed with V. Up to 6 digits.</span>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="vlegal_mobile">Mobile Number <span class="req">*</span></label>
+                      <input type="tel" id="vlegal_mobile" class="form-input" maxlength="10" placeholder="10-digit mobile number">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="vlegal_reason">Reason for Visit <span class="req">*</span></label>
+                      <select id="vlegal_reason" class="form-select">
+                        <option value="Onboarding visit">Onboarding visit</option>
+                        <option value="Regular visit">Regular visit</option>
+                        <option value="Document related visit">Document related visit</option>
+                        <option value="Customer related visit">Customer related visit</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="vlegal_address">Address (Optional)</label>
+                    <textarea id="vlegal_address" class="form-textarea" rows="2"></textarea>
+                  </div>
+                  <!-- Capture for Legal Vendor -->
+                  <div class="capture-box">
+                    <div class="capture-item">
+                      <label class="form-label">📸 Photo Proof</label>
+                      <input type="file" id="vlegal_photo_file" accept="image/*" class="form-input" style="padding: 0.35rem;">
+                      <div class="photo-preview-wrap" id="vlegal_photo_preview"><span class="photo-empty-text">No photo uploaded</span></div>
+                    </div>
+                    <div class="capture-item">
+                      <label class="form-label">📍 Capture GPS &amp; Timestamp <span class="req">*</span></label>
+                      <button type="button" class="btn-capture btn-loc-capture" data-prefix="vlegal"><span>🎯</span> Capture Legal Vendor Location</button>
+                      <div class="location-info" id="vlegal_loc_display">Location not captured.</div>
+                      <input type="hidden" id="vlegal_lat"><input type="hidden" id="vlegal_lon"><input type="hidden" id="vlegal_loc_ts">
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+
+              <!-- ================= SUB SECTION 4: BUSINESS VISIT ================= -->
+              <div id="subsec-business" class="sub-section-card" style="display: none;">
+                <div class="sub-section-header">
+                  <div class="sub-section-title">
+                    <span>💼</span> Business Visit Details
+                  </div>
+                  <span class="badge-tag-3d" style="background:#f3e8ff; color:#6b21a8;">Business</span>
+                </div>
+
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label" for="biz_name">Business Name <span class="req">*</span></label>
+                    <input type="text" id="biz_name" class="form-input" placeholder="e.g. Tirupati Traders">
+                    <span class="field-hint">No numbers. Extra spaces auto-corrected.</span>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="biz_mobile">Mobile Number <span class="req">*</span></label>
+                    <input type="tel" id="biz_mobile" class="form-input" maxlength="10" placeholder="10-digit mobile number">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="biz_reason">Reason for Visit <span class="req">*</span></label>
+                    <select id="biz_reason" class="form-select">
+                      <option value="Onboarding visit">Onboarding visit</option>
+                      <option value="Regular visit">Regular visit</option>
+                      <option value="Document related visit">Document related visit</option>
+                      <option value="Customer related visit">Customer related visit</option>
+                      <option value="Market exploration">Market exploration</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="biz_address">Address Details (Optional)</label>
+                  <textarea id="biz_address" class="form-textarea" rows="2" placeholder="Business location/premise details"></textarea>
+                </div>
+
+                <!-- Capture for Business -->
+                <div class="capture-box">
+                  <div class="capture-item">
+                    <label class="form-label">📸 Business Photo Proof</label>
+                    <input type="file" id="biz_photo_file" accept="image/*" class="form-input" style="padding: 0.35rem;">
+                    <div class="photo-preview-wrap" id="biz_photo_preview"><span class="photo-empty-text">No photo uploaded</span></div>
+                  </div>
+                  <div class="capture-item">
+                    <label class="form-label">📍 Capture GPS &amp; Timestamp <span class="req">*</span></label>
+                    <button type="button" class="btn-capture btn-loc-capture" data-prefix="biz"><span>🎯</span> Capture Business Location</button>
+                    <div class="location-info" id="biz_loc_display">Location not captured.</div>
+                    <input type="hidden" id="biz_lat"><input type="hidden" id="biz_lon"><input type="hidden" id="biz_loc_ts">
+                  </div>
+                </div>
+              </div>
+
+
+              <!-- ================= SUB SECTION 5: OTHER VISIT ================= -->
+              <div id="subsec-other" class="sub-section-card" style="display: none;">
+                <div class="sub-section-header">
+                  <div class="sub-section-title">
+                    <span>🌐</span> Other Visit Details
+                  </div>
+                  <span class="badge-tag-3d" style="background:#f1f5f9; color:#334155;">Other</span>
+                </div>
+
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label" for="oth_name">Person / Entity Name <span class="req">*</span></label>
+                    <input type="text" id="oth_name" class="form-input" placeholder="e.g. Government Office, Auditor">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="oth_mobile">Contact Mobile Number (Optional)</label>
+                    <input type="tel" id="oth_mobile" class="form-input" maxlength="10" placeholder="10-digit mobile number">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="oth_reason">Purpose / Reason <span class="req">*</span></label>
+                    <input type="text" id="oth_reason" class="form-input" placeholder="e.g. Compliance review, Local survey">
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="oth_address">Address / Location Details (Optional)</label>
+                  <textarea id="oth_address" class="form-textarea" rows="2"></textarea>
+                </div>
+
+                <!-- Capture for Other -->
+                <div class="capture-box">
+                  <div class="capture-item">
+                    <label class="form-label">📸 Photo Proof</label>
+                    <input type="file" id="oth_photo_file" accept="image/*" class="form-input" style="padding: 0.35rem;">
+                    <div class="photo-preview-wrap" id="oth_photo_preview"><span class="photo-empty-text">No photo uploaded</span></div>
+                  </div>
+                  <div class="capture-item">
+                    <label class="form-label">📍 Capture GPS &amp; Timestamp <span class="req">*</span></label>
+                    <button type="button" class="btn-capture btn-loc-capture" data-prefix="oth"><span>🎯</span> Capture Location</button>
+                    <div class="location-info" id="oth_loc_display">Location not captured.</div>
+                    <input type="hidden" id="oth_lat"><input type="hidden" id="oth_lon"><input type="hidden" id="oth_loc_ts">
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- FORM ACTION BUTTONS -->
+        <div class="form-actions-bar">
+          <div style="display: flex; gap: 0.75rem;">
+            <button type="button" id="btn-form-reset" class="btn btn-reset">
+              <span>🔄</span> Reset Form
+            </button>
+            <button type="button" id="btn-form-cancel" class="btn btn-cancel">
+              <span>❌</span> Cancel
+            </button>
+          </div>
+          <button type="submit" id="btn-form-submit" class="btn btn-submit-3d">
+            <span>🚀</span> Submit &amp; Log All Visits
+          </button>
+        </div>
+
+      </form>
+    </section>
+
+
+    <!-- ========================================== -->
+    <!-- VIEW 2: MASTER DASHBOARD & ANALYTICS -->
+    <!-- ========================================== -->
+    <section id="view-dashboard" style="display: none;">
+      
+      <!-- Dashboard Top Filter Card -->
+      <div class="master-filter-card">
+        <div class="filter-header-row">
+          <div class="filter-title">
+            <span>🔍</span> Master Advanced Filters &amp; Controls
+          </div>
+          <!-- Quick Date Range Chips -->
+          <div class="quick-date-chips" id="quick-date-filters">
+            <button type="button" class="date-chip active" data-range="all">All Dates</button>
+            <button type="button" class="date-chip" data-range="today">Today</button>
+            <button type="button" class="date-chip" data-range="yesterday">Yesterday</button>
+            <button type="button" class="date-chip" data-range="week">Last 7 Days</button>
+            <button type="button" class="date-chip" data-range="month">Last 30 Days</button>
+            <button type="button" class="date-chip" data-range="2months">Last 2 Months</button>
+          </div>
+        </div>
+
+        <!-- Filter Grid -->
+        <div class="filter-grid">
+          <!-- From Date -->
+          <div class="form-group">
+            <label class="form-label" for="flt_from_date">From Date</label>
+            <input type="date" id="flt_from_date" class="form-input">
+          </div>
+          <!-- To Date -->
+          <div class="form-group">
+            <label class="form-label" for="flt_to_date">To Date</label>
+            <input type="date" id="flt_to_date" class="form-input">
+          </div>
+          <!-- User Role -->
+          <div class="form-group">
+            <label class="form-label" for="flt_role">User Role</label>
+            <select id="flt_role" class="form-select">
+              <option value="">All Roles</option>
+              <option value="BDO">BDO</option>
+              <option value="BDM">BDM</option>
+              <option value="BPM">BPM</option>
+              <option value="BCM">BCM</option>
+              <option value="CCM">CCM</option>
+              <option value="CBM">CBM</option>
+            </select>
+          </div>
+          <!-- State -->
+          <div class="form-group">
+            <label class="form-label" for="flt_state">State</label>
+            <select id="flt_state" class="form-select">
+              <option value="">All States</option>
+            </select>
+          </div>
+          <!-- Cluster -->
+          <div class="form-group">
+            <label class="form-label" for="flt_cluster">Cluster</label>
+            <select id="flt_cluster" class="form-select">
+              <option value="">All Clusters</option>
+            </select>
+          </div>
+          <!-- Branch -->
+          <div class="form-group">
+            <label class="form-label" for="flt_branch">Branch</label>
+            <select id="flt_branch" class="form-select">
+              <option value="">All Branches</option>
+            </select>
+          </div>
+          <!-- Visit Type -->
+          <div class="form-group">
+            <label class="form-label" for="flt_type">Visit Type</label>
+            <select id="flt_type" class="form-select">
+              <option value="">All Visit Types</option>
+              <option value="Customer Visit">Customer Visit</option>
+              <option value="Partner Visit">Partner Visit</option>
+              <option value="Vendor Visit">Vendor Visit</option>
+              <option value="Business Visit">Business Visit</option>
+              <option value="Other Visit">Other Visit</option>
+            </select>
+          </div>
+          <!-- Keyword Search -->
+          <div class="form-group">
+            <label class="form-label" for="flt_search">Search Staff / Entity / Code</label>
+            <input type="text" id="flt_search" class="form-input" placeholder="Name, code, mobile...">
+          </div>
+        </div>
+
+        <!-- Filter Actions Row -->
+        <div class="filter-actions-row">
+          <div class="visit-counter-badge" id="live-visits-counter">
+            <span>📊</span> Displaying <strong>0</strong> Visits
+          </div>
+          <div style="display: flex; gap: 0.6rem;">
+            <button type="button" id="btn-flt-clear" class="btn btn-reset" style="padding: 0.45rem 0.9rem; font-size: 0.82rem;">
+              <span>🧹</span> Clear Filters
+            </button>
+            <button type="button" id="btn-flt-search" class="btn btn-submit-3d" style="padding: 0.45rem 1.25rem; font-size: 0.85rem;">
+              <span>🔍</span> Search Visits
+            </button>
+            <button type="button" id="btn-export-csv" class="btn btn-reset" style="background:#f0fdf4; color:#15803d; border-color:#bbf7d0; padding: 0.45rem 1rem; font-size: 0.82rem;">
+              <span>📥</span> Export CSV
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Metrics Cards 3D -->
+      <div class="kpi-grid-3d">
+        <div class="kpi-card-3d">
+          <div class="kpi-top">
+            <span class="kpi-label">Total Visits Logged</span>
+            <span class="kpi-icon">📊</span>
+          </div>
+          <span class="kpi-value" id="kpi-total-visits">0</span>
+        </div>
+        <div class="kpi-card-3d">
+          <div class="kpi-top">
+            <span class="kpi-label">Customer Visits</span>
+            <span class="kpi-icon">🏢</span>
+          </div>
+          <span class="kpi-value" id="kpi-cust-visits">0</span>
+        </div>
+        <div class="kpi-card-3d">
+          <div class="kpi-top">
+            <span class="kpi-label">Partner Visits</span>
+            <span class="kpi-icon">🤝</span>
+          </div>
+          <span class="kpi-value" id="kpi-partner-visits">0</span>
+        </div>
+        <div class="kpi-card-3d">
+          <div class="kpi-top">
+            <span class="kpi-label">Vendor Visits</span>
+            <span class="kpi-icon">🛠️</span>
+          </div>
+          <span class="kpi-value" id="kpi-vendor-visits">0</span>
+        </div>
+        <div class="kpi-card-3d">
+          <div class="kpi-top">
+            <span class="kpi-label">Business / Other</span>
+            <span class="kpi-icon">💼</span>
+          </div>
+          <span class="kpi-value" id="kpi-biz-visits">0</span>
+        </div>
+      </div>
+
+      <!-- Visits Table Card -->
+      <div class="table-card-3d">
+        <div class="table-header-bar">
+          <div style="font-weight: 800; font-size: 1.1rem; color: var(--slate-900);">
+            📋 Detailed Field Activity Directory
+          </div>
+          <div style="font-size: 0.8rem; color: var(--slate-500);">
+            Click 👁️ for 3D inspection voucher, ✏️ to edit, 🗑️ to delete
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="visits-table">
+            <thead>
+              <tr>
+                <th>Visit Code</th>
+                <th>Visit Date</th>
+                <th>Staff Officer</th>
+                <th>Branch &amp; Cluster</th>
+                <th>Type &amp; Sub-Type</th>
+                <th>Entity / Client</th>
+                <th>Contact</th>
+                <th>Reason</th>
+                <th>Location / Time</th>
+                <th>Photo</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="visits-table-body">
+              <tr>
+                <td colspan="11" style="text-align: center; padding: 2.5rem; color: var(--slate-400);">Loading visits...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- MODALS: EYE VIEW & EDIT MODAL -->
+  <!-- ========================================== -->
+
+  <!-- Eye View Modal (Full 3D Inspection Card) -->
+  <div class="modal-overlay" id="eye-view-modal">
+    <div class="modal-3d">
+      <div class="modal-header-3d">
+        <div class="modal-title">
+          <span>👁️</span> Visit Inspection Voucher
+        </div>
+        <button type="button" class="close-btn" data-close="eye-view-modal">&times;</button>
+      </div>
+      <div class="modal-body-3d" id="eye-view-content">
+        <!-- Rendered dynamically -->
+      </div>
+      <div class="modal-footer-3d">
+        <button type="button" class="btn btn-reset" data-close="eye-view-modal">Close</button>
+        <button type="button" class="btn btn-submit-3d" onclick="window.print()">🖨️ Print Voucher</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Visit Modal -->
+  <div class="modal-overlay" id="edit-modal">
+    <div class="modal-3d" style="max-width: 580px;">
+      <div class="modal-header-3d">
+        <div class="modal-title">
+          <span>✏️</span> Edit Visit Details
+        </div>
+        <button type="button" class="close-btn" data-close="edit-modal">&times;</button>
+      </div>
+      <div class="modal-body-3d">
+        <form id="edit-visit-form">
+          <input type="hidden" id="edit_visit_id">
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label class="form-label">Entity / Client Name</label>
+            <input type="text" id="edit_entity_name" class="form-input" required>
+          </div>
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label class="form-label">Contact Mobile Number</label>
+            <input type="tel" id="edit_mobile" class="form-input" maxlength="10">
+          </div>
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label class="form-label">Reason for Visit</label>
+            <input type="text" id="edit_reason" class="form-input">
+          </div>
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label class="form-label">Address</label>
+            <textarea id="edit_address" class="form-textarea" rows="2"></textarea>
+          </div>
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label class="form-label">Status</label>
+            <select id="edit_status" class="form-select">
+              <option value="Logged">Logged</option>
+              <option value="Verified">Verified</option>
+              <option value="Follow-up Required">Follow-up Required</option>
+              <option value="Completed">Completed</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Master Notes</label>
+            <textarea id="edit_notes" class="form-textarea" rows="2" placeholder="Administrative notes..."></textarea>
+          </div>
+          <div class="modal-footer-3d" style="padding-left: 0; padding-right: 0; margin-bottom: -1.75rem;">
+            <button type="button" class="btn btn-reset" data-close="edit-modal">Cancel</button>
+            <button type="submit" class="btn btn-submit-3d">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS for interactive map -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Main Application Script -->
+  <script src="./app.js"></script>
+</body>
+</html>
