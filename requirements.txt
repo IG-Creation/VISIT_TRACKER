@@ -1,0 +1,7 @@
+# VISIT TRACKER requires Python 3.9+ and uses the Python standard library.
+# No external pip dependencies are required to run the core application,
+# REST API, Web UI, CLI, or test suite.
+#
+# Optional development dependencies (if desired):
+# pytest>=7.0.0
+# flake8>=6.0.0

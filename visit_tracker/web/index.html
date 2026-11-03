@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visit Tracker | Enterprise Visitor Management</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-icon">VT</div>
+      <div>
+        <div class="brand-title">Visit Tracker</div>
+      </div>
+      <span class="brand-tag">v1.0.0</span>
+    </div>
+    <div class="nav-actions">
+      <button id="btn-rollcall" class="btn btn-danger">
+        🚨 Emergency Roll Call
+      </button>
+      <button id="btn-walkin" class="btn btn-success">
+        + Walk-in Check-in
+      </button>
+      <button id="btn-schedule" class="btn btn-primary">
+        + Schedule Visit
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="container">
+    <!-- Metrics Section -->
+    <section class="metrics-grid">
+      <div class="metric-card highlight">
+        <span class="metric-header">On-Site Now (Active)</span>
+        <span class="metric-value" id="kpi-active">0</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-header">Today's Visits</span>
+        <span class="metric-value" id="kpi-today-total">0</span>
+      </div>
+      <div class="metric-card success">
+        <span class="metric-header">Checked In Today</span>
+        <span class="metric-value" id="kpi-today-checkins">0</span>
+      </div>
+      <div class="metric-card warning">
+        <span class="metric-header">Expected / Scheduled</span>
+        <span class="metric-value" id="kpi-today-scheduled">0</span>
+      </div>
+    </section>
+
+    <!-- Visits Panel -->
+    <section class="panel">
+      <div class="panel-header">
+        <h2 class="panel-title">Visit Directory & Activity</h2>
+        <div style="display: flex; gap: 0.5rem;">
+          <button id="btn-hosts-modal" class="btn btn-secondary btn-sm">Manage Hosts</button>
+          <button id="btn-export-csv" class="btn btn-secondary btn-sm">Export CSV</button>
+        </div>
+
+        <div class="filter-bar">
+          <input type="text" id="search-input" class="search-input" placeholder="Search by visitor name, company, host, or pass code...">
+          <select id="status-filter" class="filter-select">
+            <option value="">All Statuses</option>
+            <option value="CHECKED_IN">Checked In (Active)</option>
+            <option value="SCHEDULED">Scheduled</option>
+            <option value="CHECKED_OUT">Checked Out</option>
+            <option value="CANCELLED">Cancelled</option>
+          </select>
+          <input type="date" id="date-filter" class="filter-select">
+          <button id="btn-refresh" class="btn btn-secondary btn-sm">Refresh</button>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Pass Code</th>
+              <th>Visitor</th>
+              <th>Company</th>
+              <th>Host & Dept</th>
+              <th>Purpose</th>
+              <th>Status</th>
+              <th>Check-in / Out</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="visits-table-body">
+            <tr>
+              <td colspan="8" style="text-align: center; padding: 2rem;">Loading visits...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Walk-in Check-in Modal -->
+  <div class="modal-overlay" id="walkin-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Walk-in Visitor Check-in</h3>
+        <button class="close-btn" data-close="walkin-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="walkin-form">
+          <div class="form-group">
+            <label class="form-label">Full Name *</label>
+            <input type="text" name="visitor_name" class="form-input" required placeholder="e.g. Jane Doe">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input type="email" name="visitor_email" class="form-input" placeholder="jane@example.com">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Phone</label>
+              <input type="tel" name="visitor_phone" class="form-input" placeholder="+1-555-0199">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Company / Organization</label>
+              <input type="text" name="visitor_company" class="form-input" placeholder="e.g. Acme Inc.">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Category</label>
+              <select name="category" class="form-select">
+                <option value="Corporate Visitor">Corporate Visitor</option>
+                <option value="Client / Sales">Client / Sales</option>
+                <option value="Contractor / Vendor">Contractor / Vendor</option>
+                <option value="Interview Candidate">Interview Candidate</option>
+                <option value="Guest">Guest</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Host Person *</label>
+              <select name="host_id" id="walkin-host-select" class="form-select" required>
+                <option value="">Select Host...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Location / Checkpoint</label>
+              <select name="location_id" id="walkin-loc-select" class="form-select">
+                <option value="">Select Location...</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Purpose of Visit *</label>
+            <input type="text" name="purpose" class="form-input" required placeholder="e.g. Business Meeting, Consultation, Interview">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Notes / Instructions</label>
+            <textarea name="notes" class="form-textarea" rows="2" placeholder="Optional notes..."></textarea>
+          </div>
+          <div class="modal-footer" style="padding-left: 0; padding-right: 0; margin-bottom: -1.5rem;">
+            <button type="button" class="btn btn-secondary" data-close="walkin-modal">Cancel</button>
+            <button type="submit" class="btn btn-success">Check-in Now</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Schedule Visit Modal -->
+  <div class="modal-overlay" id="schedule-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Schedule Expected Visit</h3>
+        <button class="close-btn" data-close="schedule-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="schedule-form">
+          <div class="form-group">
+            <label class="form-label">Visitor *</label>
+            <select name="visitor_id" id="schedule-visitor-select" class="form-select" required>
+              <option value="">Select Existing Visitor or type below...</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Host Person</label>
+              <select name="host_id" id="schedule-host-select" class="form-select">
+                <option value="">Select Host...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Location</label>
+              <select name="location_id" id="schedule-loc-select" class="form-select">
+                <option value="">Select Location...</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Expected Date & Time *</label>
+            <input type="datetime-local" name="expected_checkin" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Purpose of Visit *</label>
+            <input type="text" name="purpose" class="form-input" required placeholder="e.g. Annual Review, Client Demo">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Notes</label>
+            <textarea name="notes" class="form-textarea" rows="2"></textarea>
+          </div>
+          <div class="modal-footer" style="padding-left: 0; padding-right: 0; margin-bottom: -1.5rem;">
+            <button type="button" class="btn btn-secondary" data-close="schedule-modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Appointment</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Visitor Pass Modal -->
+  <div class="modal-overlay" id="pass-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Visitor Security Pass</h3>
+        <button class="close-btn" data-close="pass-modal">&times;</button>
+      </div>
+      <div class="modal-body" id="pass-content">
+        <!-- Rendered dynamically -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close="pass-modal">Close</button>
+        <button class="btn btn-primary" onclick="window.print()">Print Pass</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Emergency Roll Call Modal -->
+  <div class="modal-overlay" id="rollcall-modal">
+    <div class="modal" style="max-width: 720px;">
+      <div class="modal-header" style="background-color: var(--danger-bg); border-bottom-color: #fca5a5;">
+        <h3 class="modal-title" style="color: var(--danger);">🚨 Emergency Roll Call — Currently On-Site</h3>
+        <button class="close-btn" data-close="rollcall-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 1rem; font-size: 0.875rem; color: var(--slate-600);">
+          This list contains all active visitors checked in to the facility. Use this for building evacuation verification.
+        </p>
+        <div class="table-responsive">
+          <table class="table" style="font-size: 0.8125rem;">
+            <thead>
+              <tr>
+                <th>Visitor</th>
+                <th>Company</th>
+                <th>Host</th>
+                <th>Check-in Time</th>
+                <th>Badge #</th>
+              </tr>
+            </thead>
+            <tbody id="rollcall-table-body">
+              <tr><td colspan="5" style="text-align: center;">No active visitors on premises.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close="rollcall-modal">Close</button>
+        <button class="btn btn-danger" onclick="window.print()">Print Evacuation Sheet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Host Management Modal -->
+  <div class="modal-overlay" id="hosts-modal">
+    <div class="modal" style="max-width: 650px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Host Employees</h3>
+        <button class="close-btn" data-close="hosts-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="add-host-form" style="margin-bottom: 1.5rem; background: var(--slate-50); padding: 1rem; border-radius: var(--radius);">
+          <div style="font-weight: 600; font-size: 0.875rem; margin-bottom: 0.5rem;">Add New Host</div>
+          <div class="form-row">
+            <input type="text" name="name" class="form-input" placeholder="Full Name" required>
+            <input type="text" name="department" class="form-input" placeholder="Department">
+          </div>
+          <div class="form-row" style="margin-top: 0.5rem;">
+            <input type="email" name="email" class="form-input" placeholder="Email">
+            <input type="tel" name="phone" class="form-input" placeholder="Phone">
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm" style="margin-top: 0.75rem;">+ Add Host</button>
+        </form>
+        <div class="table-responsive">
+          <table class="table" style="font-size: 0.8125rem;">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Department</th>
+                <th>Email</th>
+                <th>Phone</th>
+              </tr>
+            </thead>
+            <tbody id="hosts-table-body">
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close="hosts-modal">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
