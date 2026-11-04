@@ -66,28 +66,43 @@ class TestValidationHelpers(unittest.TestCase):
     def test_validate_dsa_code(self):
         self.assertEqual(validate_dsa_code("FBGP123456"), "FBGP123456")
         self.assertEqual(validate_dsa_code("fbgp45"), "FBGP45")
+        # Optional check for onboarding/regular visit
+        self.assertIsNone(validate_dsa_code(None, required=False))
+        self.assertIsNone(validate_dsa_code("", required=False))
+        self.assertIsNone(validate_dsa_code("FBGP", required=False))
         with self.assertRaises(ValidationError):
             validate_dsa_code("DSA123")
         with self.assertRaises(ValidationError):
             validate_dsa_code("FBGP1234567")
+        with self.assertRaises(ValidationError):
+            validate_dsa_code("FBGP", required=True)
 
     def test_validate_connector_code(self):
         self.assertEqual(validate_connector_code("FGP123456"), "FGP123456")
         self.assertEqual(validate_connector_code("fgp987"), "FGP987")
+        # Optional check for onboarding/regular visit
+        self.assertIsNone(validate_connector_code(None, required=False))
+        self.assertIsNone(validate_connector_code("", required=False))
+        self.assertIsNone(validate_connector_code("FGP", required=False))
         with self.assertRaises(ValidationError):
             validate_connector_code("CON123")
         with self.assertRaises(ValidationError):
             validate_connector_code("FGP1234567")
+        with self.assertRaises(ValidationError):
+            validate_connector_code("FGP", required=True)
 
     def test_validate_vendor_code(self):
         self.assertIsNone(validate_vendor_code(None))
         self.assertIsNone(validate_vendor_code(""))
+        self.assertIsNone(validate_vendor_code("V", required=False))
         self.assertEqual(validate_vendor_code("V123456"), "V123456")
         self.assertEqual(validate_vendor_code("v99"), "V99")
         with self.assertRaises(ValidationError):
             validate_vendor_code("VEN123")
         with self.assertRaises(ValidationError):
             validate_vendor_code("V1234567")
+        with self.assertRaises(ValidationError):
+            validate_vendor_code("V", required=True)
 
     def test_validate_lead_or_loan_id(self):
         self.assertEqual(validate_lead_or_loan_id("482910"), "482910")

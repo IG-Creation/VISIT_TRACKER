@@ -25,12 +25,12 @@
     </div>
 
     <!-- Mode Switcher -->
-    <div class="mode-switcher">
+    <div class="mode-switcher" id="main-mode-switcher">
       <button id="btn-mode-form" class="mode-btn active" title="Field Officer Entry Form">
         <span>📝</span> Field Visit Form
       </button>
       <button id="btn-mode-dashboard" class="mode-btn" title="Master Control & Analytics">
-        <span>📊</span> Master Dashboard
+        <span>📊</span> Master Dashboard <span id="master-lock-badge" style="font-size:0.75rem;">🔒</span>
       </button>
     </div>
   </header>
@@ -387,12 +387,12 @@
                       <input type="text" id="dsa_name" class="form-input" placeholder="e.g. Apex Associates">
                     </div>
                     <div class="form-group">
-                      <label class="form-label" for="dsa_code_num">DSA Code <span class="req">*</span></label>
+                      <label class="form-label" for="dsa_code_num" id="lbl_dsa_code">DSA Code <span class="badge-opt-pill" id="tag_dsa_code">Optional</span></label>
                       <div class="input-addon-group">
                         <span class="input-prefix">FBGP</span>
                         <input type="text" id="dsa_code_num" class="form-input" maxlength="6" inputmode="numeric" placeholder="102938">
                       </div>
-                      <span class="field-hint">FBGP auto-freezed. Up to 6 digits.</span>
+                      <span class="field-hint">FBGP auto-freezed. Up to 6 digits. (Not mandatory for Onboarding/Regular visit)</span>
                     </div>
                     <div class="form-group">
                       <label class="form-label" for="dsa_mobile">DSA Mobile Number <span class="req">*</span></label>
@@ -452,12 +452,12 @@
                       <input type="text" id="con_name" class="form-input" placeholder="e.g. Ramesh Chandra">
                     </div>
                     <div class="form-group">
-                      <label class="form-label" for="con_code_num">Connector Code <span class="req">*</span></label>
+                      <label class="form-label" for="con_code_num" id="lbl_con_code">Connector Code <span class="badge-opt-pill" id="tag_con_code">Optional</span></label>
                       <div class="input-addon-group">
                         <span class="input-prefix">FGP</span>
                         <input type="text" id="con_code_num" class="form-input" maxlength="6" inputmode="numeric" placeholder="203948">
                       </div>
-                      <span class="field-hint">FGP auto-freezed. Up to 6 digits.</span>
+                      <span class="field-hint">FGP auto-freezed. Up to 6 digits. (Not mandatory for Onboarding/Regular visit)</span>
                     </div>
                     <div class="form-group">
                       <label class="form-label" for="con_mobile">Connector Mobile Number <span class="req">*</span></label>
@@ -547,12 +547,12 @@
                       <input type="text" id="vtech_name" class="form-input" placeholder="e.g. Valuation Tech Engineers">
                     </div>
                     <div class="form-group">
-                      <label class="form-label" for="vtech_code_num">Vendor Code (Optional)</label>
+                      <label class="form-label" for="vtech_code_num" id="lbl_vtech_code">Vendor Code <span class="badge-opt-pill" id="tag_vtech_code">Optional</span></label>
                       <div class="input-addon-group">
                         <span class="input-prefix">V</span>
                         <input type="text" id="vtech_code_num" class="form-input" maxlength="6" inputmode="numeric" placeholder="102938">
                       </div>
-                      <span class="field-hint">Auto-prefixed with V. Up to 6 digits.</span>
+                      <span class="field-hint">Auto-prefixed with V. Up to 6 digits. (Not mandatory for Onboarding/Regular visit)</span>
                     </div>
                     <div class="form-group">
                       <label class="form-label" for="vtech_mobile">Mobile Number <span class="req">*</span></label>
@@ -612,12 +612,12 @@
                       <input type="text" id="vlegal_name" class="form-input" placeholder="e.g. Legal Associates Chamber">
                     </div>
                     <div class="form-group">
-                      <label class="form-label" for="vlegal_code_num">Vendor Code (Optional)</label>
+                      <label class="form-label" for="vlegal_code_num" id="lbl_vlegal_code">Vendor Code <span class="badge-opt-pill" id="tag_vlegal_code">Optional</span></label>
                       <div class="input-addon-group">
                         <span class="input-prefix">V</span>
                         <input type="text" id="vlegal_code_num" class="form-input" maxlength="6" inputmode="numeric" placeholder="203948">
                       </div>
-                      <span class="field-hint">Auto-prefixed with V. Up to 6 digits.</span>
+                      <span class="field-hint">Auto-prefixed with V. Up to 6 digits. (Not mandatory for Onboarding/Regular visit)</span>
                     </div>
                     <div class="form-group">
                       <label class="form-label" for="vlegal_mobile">Mobile Number <span class="req">*</span></label>
@@ -900,12 +900,21 @@
           <div class="visit-counter-badge" id="live-visits-counter">
             <span>📊</span> Displaying <strong>0</strong> Visits
           </div>
-          <div style="display: flex; gap: 0.5rem;">
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
             <button type="button" id="btn-flt-clear" class="btn btn-reset" style="padding: 0.4rem 0.8rem;">
               <span>🧹</span> Clear
             </button>
             <button type="button" id="btn-flt-search" class="btn btn-submit-3d" style="padding: 0.4rem 1.1rem;">
               <span>🔍</span> Search
+            </button>
+            <button type="button" id="btn-sync-cloud" class="btn btn-reset" style="background:#faf5ff; color:#7e22ce; border-color:#d8b4fe; padding: 0.45rem 0.9rem;" title="Refresh &amp; Pull Team Records">
+              <span id="sync-icon">🔄</span> Sync Records
+            </button>
+            <button type="button" id="btn-cloud-config" class="btn btn-reset" style="background:#f8fafc; color:#334155; border-color:#cbd5e1; padding: 0.45rem 0.9rem;" title="Google Sheets / Cloud Webhook">
+              <span>☁️</span> Cloud Connect
+            </button>
+            <button type="button" id="btn-copy-field-link" class="btn btn-team-link" title="Copy link for field officers to enter visits">
+              <span>🔗</span> Copy Field Link
             </button>
             <button type="button" id="btn-export-excel" class="btn btn-reset btn-export-highlight" style="background:#f0fdf4; color:#15803d; border-color:#86efac; padding: 0.45rem 1rem;">
               <span>📥</span> Download Excel
@@ -1249,6 +1258,110 @@
           <div class="shutter-inner-ring"></div>
         </button>
         <button type="button" class="btn btn-cancel" id="btn-cancel-camera">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Master Authentication Passcode Modal -->
+  <div class="modal-overlay" id="master-auth-modal" style="display:none;">
+    <div class="master-auth-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <h3 style="font-size:1.05rem; font-weight:800; color:var(--slate-800); display:flex; align-items:center; gap:8px;">
+          <span>🔐</span> Master Access Verification
+        </h3>
+        <button type="button" class="close-btn" id="btn-close-master-auth">&times;</button>
+      </div>
+      <p style="font-size:0.82rem; color:var(--slate-600); margin-bottom:1.1rem; line-height:1.45;">
+        The Master Dashboard contains full audit logs, branch controls, and executive export tools. Enter your Master Passcode to proceed.
+      </p>
+      <div class="form-group" style="margin-bottom:1rem;">
+        <label class="form-label" for="master_passcode_input">Master Passcode</label>
+        <div style="position:relative;">
+          <input type="password" id="master_passcode_input" class="form-input" placeholder="Enter master passcode (default: master123)" autocomplete="current-password">
+          <button type="button" id="btn-toggle-passcode" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:0.9rem;" title="Show/Hide">👁️</button>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:1.25rem;">
+        <input type="checkbox" id="chk_remember_master" checked>
+        <label for="chk_remember_master" style="font-size:0.78rem; color:var(--slate-700); cursor:pointer;">Remember Master Access on this device</label>
+      </div>
+      <div style="display:flex; gap:0.6rem; justify-content:flex-end;">
+        <button type="button" class="btn btn-cancel" id="btn-cancel-master-auth">Cancel</button>
+        <button type="button" class="btn btn-submit-3d" id="btn-unlock-master" style="padding:0.45rem 1.25rem;">
+          <span>🔓</span> Unlock Dashboard
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cloud Sync & Multi-User Connection Modal -->
+  <div class="modal-overlay" id="cloud-sync-modal" style="display:none;">
+    <div class="cloud-modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+        <h3 style="font-size:1.1rem; font-weight:800; color:var(--slate-800); display:flex; align-items:center; gap:8px;">
+          <span>☁️</span> Cloud Database &amp; Multi-User Team Sync
+        </h3>
+        <button type="button" class="close-btn" id="btn-close-cloud-modal">&times;</button>
+      </div>
+      <p style="font-size:0.83rem; color:var(--slate-600); margin-bottom:1rem; line-height:1.45;">
+        Connect this tracker to a free <strong>Google Sheet</strong> (or cloud webhook) so all field officers across branches immediately sync their visit logs to this Master Dashboard.
+      </p>
+
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:1rem; margin-bottom:1.1rem;">
+        <label class="form-label" for="cloud_webhook_url" style="font-weight:700;">Google Apps Script Web App URL / Cloud Webhook</label>
+        <div style="display:flex; gap:0.5rem; margin-top:0.35rem;">
+          <input type="url" id="cloud_webhook_url" class="form-input" placeholder="https://script.google.com/macros/s/.../exec">
+          <button type="button" id="btn-save-cloud-url" class="btn btn-submit-3d" style="padding:0.45rem 1rem; white-space:nowrap;">
+            <span>💾</span> Save
+          </button>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem;">
+          <span style="font-size:0.74rem; color:var(--slate-500);">Current status: <strong id="cloud-conn-status" style="color:#d97706;">Using High-Capacity Local IndexedDB</strong></span>
+          <button type="button" id="btn-test-cloud" class="btn btn-reset" style="padding:0.25rem 0.6rem; font-size:0.72rem;">Test Connection</button>
+        </div>
+      </div>
+
+      <div style="margin-bottom:1.2rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong style="font-size:0.82rem; color:var(--slate-800);">📋 1-Minute Google Sheets Setup (Unlimited Free Storage)</strong>
+          <button type="button" id="btn-copy-script" class="btn btn-reset" style="padding:0.25rem 0.6rem; font-size:0.72rem;">Copy Script Code</button>
+        </div>
+        <ol style="font-size:0.76rem; color:var(--slate-600); margin:0.5rem 0 0.5rem 1.2rem; line-height:1.5;">
+          <li>Create a new Google Sheet &gt; Click <strong>Extensions</strong> &gt; <strong>Apps Script</strong>.</li>
+          <li>Paste the copied script code &gt; Click <strong>Deploy</strong> &gt; <strong>New Deployment</strong>.</li>
+          <li>Select <strong>Web app</strong> &gt; Set <em>"Who has access"</em> to <strong>"Anyone"</strong> &gt; Click <strong>Deploy</strong>.</li>
+          <li>Paste the generated Web App URL into the box above and click Save!</li>
+        </ol>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #f1f5f9; padding-top:1rem;">
+        <button type="button" id="btn-backup-json" class="btn btn-reset" style="padding:0.4rem 0.8rem; font-size:0.78rem;">
+          <span>📦</span> Export Local DB (JSON)
+        </button>
+        <button type="button" class="btn btn-submit-3d" id="btn-close-cloud-done" style="padding:0.45rem 1.25rem;">
+          <span>✅</span> Done
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Submission Success Confirmation Modal -->
+  <div class="modal-overlay" id="submit-success-modal" style="display:none;">
+    <div class="success-modal-box">
+      <div style="font-size:2.8rem; margin-bottom:0.4rem;">🎉</div>
+      <h3 style="font-size:1.25rem; font-weight:800; color:#15803d; margin-bottom:0.35rem;">Visit Logged Successfully!</h3>
+      <p style="font-size:0.85rem; color:var(--slate-600); margin-bottom:1rem;" id="success-modal-subtext">
+        Generated and stored visit records with GPS satellite coordinates and tamper-proof timestamps.
+      </p>
+      <div id="success-modal-records" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:0.75rem; text-align:left; max-height:160px; overflow-y:auto; margin-bottom:1.25rem; font-size:0.8rem;">
+      </div>
+      <div style="display:flex; gap:0.6rem; justify-content:center;">
+        <button type="button" class="btn btn-reset" id="btn-success-new">
+          <span>📝</span> Submit Another Visit
+        </button>
+        <button type="button" class="btn btn-submit-3d" id="btn-success-dashboard">
+          <span>📊</span> View in Master Dashboard ↗
+        </button>
       </div>
     </div>
   </div>

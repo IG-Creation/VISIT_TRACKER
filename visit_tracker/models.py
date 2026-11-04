@@ -73,41 +73,71 @@ def validate_mobile(value: Optional[str], field_name: str = "Mobile number", req
     return cleaned
 
 
-def validate_dsa_code(value: Optional[str]) -> str:
-    """Validate DSA code: starts with FBGP followed by up to 6 digits."""
+def validate_dsa_code(value: Optional[str], required: bool = True) -> Optional[str]:
+    """Validate DSA code: starts with FBGP followed by up to 6 digits. Optional for onboarding/regular visits."""
     if not value or not str(value).strip():
-        raise ValidationError("DSA Code is required.")
+        if required:
+            raise ValidationError("DSA Code is required.")
+        return None
     raw = str(value).strip().upper()
+    if raw == "FBGP":
+        if required:
+            raise ValidationError("DSA Code numeric part must be between 1 and 6 digits.")
+        return None
     if not raw.startswith("FBGP"):
         raise ValidationError("DSA Code must start with 'FBGP'.")
     digits = raw[4:]
-    if not digits.isdigit() or len(digits) == 0 or len(digits) > 6:
+    if not digits:
+        if required:
+            raise ValidationError("DSA Code numeric part must be between 1 and 6 digits.")
+        return None
+    if not digits.isdigit() or len(digits) > 6:
         raise ValidationError("DSA Code numeric part must be between 1 and 6 digits.")
     return f"FBGP{digits}"
 
 
-def validate_connector_code(value: Optional[str]) -> str:
-    """Validate Connector code: starts with FGP followed by up to 6 digits."""
+def validate_connector_code(value: Optional[str], required: bool = True) -> Optional[str]:
+    """Validate Connector code: starts with FGP followed by up to 6 digits. Optional for onboarding/regular visits."""
     if not value or not str(value).strip():
-        raise ValidationError("Connector Code is required.")
+        if required:
+            raise ValidationError("Connector Code is required.")
+        return None
     raw = str(value).strip().upper()
+    if raw == "FGP":
+        if required:
+            raise ValidationError("Connector Code numeric part must be between 1 and 6 digits.")
+        return None
     if not raw.startswith("FGP"):
         raise ValidationError("Connector Code must start with 'FGP'.")
     digits = raw[3:]
-    if not digits.isdigit() or len(digits) == 0 or len(digits) > 6:
+    if not digits:
+        if required:
+            raise ValidationError("Connector Code numeric part must be between 1 and 6 digits.")
+        return None
+    if not digits.isdigit() or len(digits) > 6:
         raise ValidationError("Connector Code numeric part must be between 1 and 6 digits.")
     return f"FGP{digits}"
 
 
-def validate_vendor_code(value: Optional[str]) -> Optional[str]:
-    """Validate Vendor code: optional, starts with V followed by up to 6 digits."""
+def validate_vendor_code(value: Optional[str], required: bool = False) -> Optional[str]:
+    """Validate Vendor code: starts with V followed by up to 6 digits. Optional for onboarding/regular visits."""
     if not value or not str(value).strip():
+        if required:
+            raise ValidationError("Vendor Code is required.")
         return None
     raw = str(value).strip().upper()
+    if raw == "V":
+        if required:
+            raise ValidationError("Vendor Code numeric part must be between 1 and 6 digits.")
+        return None
     if not raw.startswith("V"):
         raise ValidationError("Vendor Code must start with 'V'.")
     digits = raw[1:]
-    if not digits.isdigit() or len(digits) == 0 or len(digits) > 6:
+    if not digits:
+        if required:
+            raise ValidationError("Vendor Code numeric part must be between 1 and 6 digits.")
+        return None
+    if not digits.isdigit() or len(digits) > 6:
         raise ValidationError("Vendor Code numeric part must be between 1 and 6 digits.")
     return f"V{digits}"
 

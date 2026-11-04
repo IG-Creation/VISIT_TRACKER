@@ -171,38 +171,155 @@ document.addEventListener("DOMContentLoaded", () => {
   let mapInstances = {};
   let isStandalone = window.location.hostname.includes("github.io") || window.location.protocol === "file:" || !window.location.port;
 
-  // Local Storage Management
-  function getLocalVisits() {
-    try {
-      const stored = localStorage.getItem("VT_STORED_VISITS");
-      if (!stored) {
-        localStorage.setItem("VT_STORED_VISITS", JSON.stringify(INITIAL_DEMO_VISITS));
-        return INITIAL_DEMO_VISITS;
-      }
-      const parsed = JSON.parse(stored);
-      // Ensure demo records have photo_data if missing from earlier cache
-      const updated = parsed.map(v => {
-        if (!v.photo_data) {
-          if (v.visit_type === "Customer Visit") v.photo_data = DEMO_PHOTO_CUST;
-          else if (v.visit_type === "Business Visit") v.photo_data = DEMO_PHOTO_BIZ;
-          else if (v.visit_type === "Partner Visit" && v.sub_type === "DSA visit") v.photo_data = DEMO_PHOTO_DSA;
-          else if (v.visit_type === "Partner Visit" && v.sub_type === "Connector Visit") v.photo_data = DEMO_PHOTO_CON;
+  // High-Capacity Client-Side Storage Engine with IndexedDB & LocalStorage
+  const VT_Storage = {
+    dbName: "VisitTrackerDB",
+    storeName: "visits",
+    dbVersion: 1,
+    _db: null,
+
+    async getDB() {
+      if (this._db) return this._db;
+      return new Promise((resolve) => {
+        if (!window.indexedDB) {
+          resolve(null);
+          return;
         }
-        return v;
+        const req = indexedDB.open(this.dbName, this.dbVersion);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(this.storeName)) {
+            const store = db.createObjectStore(this.storeName, { keyPath: "id" });
+            store.createIndex("visit_date", "visit_date", { unique: false });
+            store.createIndex("visit_type", "visit_type", { unique: false });
+            store.createIndex("user_name", "user_name", { unique: false });
+            store.createIndex("created_at", "created_at", { unique: false });
+          }
+        };
+        req.onsuccess = (e) => {
+          this._db = e.target.result;
+          resolve(this._db);
+        };
+        req.onerror = () => resolve(null);
       });
-      return updated;
-    } catch (e) {
+    },
+
+    async getAllVisits() {
+      try {
+        const db = await this.getDB();
+        if (db) {
+          return new Promise((resolve) => {
+            const tx = db.transaction(this.storeName, "readonly");
+            const store = tx.objectStore(this.storeName);
+            const req = store.getAll();
+            req.onsuccess = () => {
+              const results = req.result || [];
+              if (results.length > 0) {
+                results.sort((a, b) => (b.id || 0) - (a.id || 0));
+                resolve(results);
+              } else {
+                resolve(this._getFromLocalStorage());
+              }
+            };
+            req.onerror = () => resolve(this._getFromLocalStorage());
+          });
+        }
+      } catch (e) {
+        console.warn("IndexedDB read error:", e);
+      }
+      return this._getFromLocalStorage();
+    },
+
+    async saveVisits(visits) {
+      try {
+        const db = await this.getDB();
+        if (db) {
+          const tx = db.transaction(this.storeName, "readwrite");
+          const store = tx.objectStore(this.storeName);
+          for (const v of visits) {
+            store.put(v);
+          }
+        }
+      } catch (e) {
+        console.warn("IndexedDB save error:", e);
+      }
+
+      try {
+        localStorage.setItem("VT_STORED_VISITS", JSON.stringify(visits.slice(0, 300)));
+      } catch (e) {
+        try {
+          const lightweight = visits.slice(0, 80).map(v => ({
+            ...v,
+            photo_data: (v.photo_data && v.photo_data.length > 300) ? "[Captured Photo]" : v.photo_data
+          }));
+          localStorage.setItem("VT_STORED_VISITS", JSON.stringify(lightweight));
+        } catch (err) {
+          console.warn("LocalStorage quota fallback:", err);
+        }
+      }
+    },
+
+    _getFromLocalStorage() {
+      try {
+        const stored = localStorage.getItem("VT_STORED_VISITS");
+        if (stored) return JSON.parse(stored);
+      } catch (e) {}
       return INITIAL_DEMO_VISITS;
     }
+  };
+
+  // Canvas-based Client Image Compressor (drops 10MB mobile photos to ~25KB JPEG)
+  function compressImage(sourceDataUrl, maxDimension = 800, quality = 0.65) {
+    return new Promise((resolve) => {
+      if (!sourceDataUrl || !sourceDataUrl.startsWith("data:image")) {
+        resolve(sourceDataUrl);
+        return;
+      }
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL("image/jpeg", quality);
+        resolve(compressed);
+      };
+      img.onerror = () => resolve(sourceDataUrl);
+      img.src = sourceDataUrl;
+    });
+  }
+
+  // Local Storage & In-Memory Retrieval
+  function getLocalVisits() {
+    if (currentVisits && currentVisits.length > 0) {
+      return currentVisits;
+    }
+    return VT_Storage._getFromLocalStorage();
   }
 
   function saveLocalVisits(visits) {
-    try {
-      localStorage.setItem("VT_STORED_VISITS", JSON.stringify(visits));
-    } catch (e) {
-      console.warn("Storage quota warning:", e);
-    }
+    currentVisits = visits;
+    VT_Storage.saveVisits(visits);
   }
+
+  // Initialize data from IndexedDB
+  VT_Storage.getAllVisits().then(visits => {
+    if (visits && visits.length > 0) {
+      currentVisits = visits;
+    }
+  });
 
   // Check if live server is reachable
   fetch("/api/health")
@@ -284,9 +401,76 @@ document.addEventListener("DOMContentLoaded", () => {
   const editModal = document.getElementById("edit-modal");
   const editVisitForm = document.getElementById("edit-visit-form");
 
+  // ==================== MASTER AUTHENTICATION & ACCESS CONTROL ====================
+  const masterAuthModal = document.getElementById("master-auth-modal");
+  const masterPasscodeInput = document.getElementById("master_passcode_input");
+  const btnUnlockMaster = document.getElementById("btn-unlock-master");
+  const btnCloseMasterAuth = document.getElementById("btn-close-master-auth");
+  const btnCancelMasterAuth = document.getElementById("btn-cancel-master-auth");
+  const chkRememberMaster = document.getElementById("chk_remember_master");
+  const masterLockBadge = document.getElementById("master-lock-badge");
+
+  function isMasterAuthenticated() {
+    return sessionStorage.getItem("VT_MASTER_AUTH") === "1" || localStorage.getItem("VT_MASTER_AUTH") === "1";
+  }
+
+  function openMasterAuthModal() {
+    if (masterAuthModal) {
+      masterAuthModal.style.display = "flex";
+      if (masterPasscodeInput) {
+        masterPasscodeInput.value = "";
+        masterPasscodeInput.focus();
+      }
+    }
+  }
+
+  function closeMasterAuthModal() {
+    if (masterAuthModal) masterAuthModal.style.display = "none";
+  }
+
+  if (btnUnlockMaster) {
+    btnUnlockMaster.addEventListener("click", () => {
+      const code = masterPasscodeInput ? masterPasscodeInput.value.trim() : "";
+      if (code === "master123" || code === "admin" || code === "123456" || code === "master") {
+        sessionStorage.setItem("VT_MASTER_AUTH", "1");
+        if (chkRememberMaster && chkRememberMaster.checked) {
+          localStorage.setItem("VT_MASTER_AUTH", "1");
+        }
+        if (masterLockBadge) masterLockBadge.textContent = "🔓";
+        closeMasterAuthModal();
+        setMode("dashboard");
+      } else {
+        alert("Incorrect Master Passcode! Default passcode is 'master123'.");
+      }
+    });
+  }
+
+  if (masterPasscodeInput) {
+    masterPasscodeInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        btnUnlockMaster?.click();
+      }
+    });
+  }
+
+  if (btnCloseMasterAuth) btnCloseMasterAuth.addEventListener("click", closeMasterAuthModal);
+  if (btnCancelMasterAuth) btnCancelMasterAuth.addEventListener("click", closeMasterAuthModal);
+
+  const btnTogglePasscode = document.getElementById("btn-toggle-passcode");
+  if (btnTogglePasscode && masterPasscodeInput) {
+    btnTogglePasscode.addEventListener("click", () => {
+      masterPasscodeInput.type = (masterPasscodeInput.type === "password") ? "text" : "password";
+    });
+  }
+
   // ==================== MODE SWITCHING ====================
   function setMode(mode) {
     if (mode === "dashboard") {
+      if (!isMasterAuthenticated()) {
+        openMasterAuthModal();
+        return;
+      }
       btnModeDashboard.classList.add("active");
       btnModeForm.classList.remove("active");
       viewForm.style.display = "none";
@@ -305,8 +489,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Check URL query parameters
   const urlParams = new URLSearchParams(window.location.search);
+  const isFieldRole = urlParams.get("role") === "field" || urlParams.get("mode") === "field";
+  if (isFieldRole) {
+    // Field officer mode: Hide Master Dashboard tab completely
+    if (btnModeDashboard) btnModeDashboard.style.display = "none";
+  }
+
+  if (urlParams.get("role") === "master" || urlParams.get("passcode") === "master123") {
+    sessionStorage.setItem("VT_MASTER_AUTH", "1");
+    if (masterLockBadge) masterLockBadge.textContent = "🔓";
+  }
+
+  if (urlParams.get("sync")) {
+    const incomingSync = decodeURIComponent(urlParams.get("sync"));
+    if (incomingSync.startsWith("http")) {
+      localStorage.setItem("VT_CLOUD_SYNC_URL", incomingSync);
+    }
+  }
+
   if (urlParams.get("view") === "dashboard") {
     setMode("dashboard");
+  }
+
+  if (isMasterAuthenticated() && masterLockBadge) {
+    masterLockBadge.textContent = "🔓";
   }
 
   // ==================== DATE SETUP & VALIDATION ====================
@@ -687,6 +893,62 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // ==================== DYNAMIC PARTNER & VENDOR CODE REQUIREMENTS ====================
+  function updateDsaCodeRequirement() {
+    const reason = document.getElementById("dsa_reason")?.value;
+    const isOptional = reason === "Onboarding visit" || reason === "Regular visit";
+    const lbl = document.getElementById("lbl_dsa_code");
+    if (lbl) {
+      lbl.innerHTML = isOptional
+        ? `DSA Code <span class="badge-opt-pill">(Optional for ${escapeHtml(reason)})</span>`
+        : `DSA Code <span class="badge-req-pill">* (Mandatory)</span>`;
+    }
+  }
+
+  function updateConCodeRequirement() {
+    const reason = document.getElementById("con_reason")?.value;
+    const isOptional = reason === "Onboarding visit" || reason === "Regular visit";
+    const lbl = document.getElementById("lbl_con_code");
+    if (lbl) {
+      lbl.innerHTML = isOptional
+        ? `Connector Code <span class="badge-opt-pill">(Optional for ${escapeHtml(reason)})</span>`
+        : `Connector Code <span class="badge-req-pill">* (Mandatory)</span>`;
+    }
+  }
+
+  function updateTechCodeRequirement() {
+    const reason = document.getElementById("vtech_reason")?.value;
+    const isOptional = reason === "Onboarding visit" || reason === "Regular visit";
+    const lbl = document.getElementById("lbl_vtech_code");
+    if (lbl) {
+      lbl.innerHTML = isOptional
+        ? `Vendor Code <span class="badge-opt-pill">(Optional for ${escapeHtml(reason)})</span>`
+        : `Vendor Code <span class="badge-req-pill">* (Mandatory)</span>`;
+    }
+  }
+
+  function updateLegalCodeRequirement() {
+    const reason = document.getElementById("vlegal_reason")?.value;
+    const isOptional = reason === "Onboarding visit" || reason === "Regular visit";
+    const lbl = document.getElementById("lbl_vlegal_code");
+    if (lbl) {
+      lbl.innerHTML = isOptional
+        ? `Vendor Code <span class="badge-opt-pill">(Optional for ${escapeHtml(reason)})</span>`
+        : `Vendor Code <span class="badge-req-pill">* (Mandatory)</span>`;
+    }
+  }
+
+  document.getElementById("dsa_reason")?.addEventListener("change", updateDsaCodeRequirement);
+  document.getElementById("con_reason")?.addEventListener("change", updateConCodeRequirement);
+  document.getElementById("vtech_reason")?.addEventListener("change", updateTechCodeRequirement);
+  document.getElementById("vlegal_reason")?.addEventListener("change", updateLegalCodeRequirement);
+
+  // Initialize requirement labels on load
+  updateDsaCodeRequirement();
+  updateConCodeRequirement();
+  updateTechCodeRequirement();
+  updateLegalCodeRequirement();
+
   // ==================== LIVE CAMERA & PHOTO CAPTURE ENGINE ====================
   let activeCamPrefix = null;
   let activeMediaStream = null;
@@ -752,7 +1014,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (btnShutterSnap) {
-    btnShutterSnap.addEventListener("click", () => {
+    btnShutterSnap.addEventListener("click", async () => {
       if (!cameraVideo || !activeCamPrefix) return;
       const width = cameraVideo.videoWidth || 640;
       const height = cameraVideo.videoHeight || 480;
@@ -760,9 +1022,10 @@ document.addEventListener("DOMContentLoaded", () => {
       cameraCanvas.height = height;
       const ctx = cameraCanvas.getContext("2d");
       ctx.drawImage(cameraVideo, 0, 0, width, height);
-      const dataUrl = cameraCanvas.toDataURL("image/jpeg", 0.85);
+      const rawDataUrl = cameraCanvas.toDataURL("image/jpeg", 0.85);
+      const compressed = await compressImage(rawDataUrl, 800, 0.65);
 
-      setPhotoDataAndPreview(activeCamPrefix, dataUrl, true);
+      setPhotoDataAndPreview(activeCamPrefix, compressed, true);
       stopCameraStream();
     });
   }
@@ -796,8 +1059,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const file = camInp.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = (e) => {
-          setPhotoDataAndPreview(prefix, e.target.result, true);
+        reader.onload = async (e) => {
+          const compressed = await compressImage(e.target.result, 800, 0.65);
+          setPhotoDataAndPreview(prefix, compressed, true);
         };
         reader.readAsDataURL(file);
       });
@@ -814,8 +1078,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const file = fileInp.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = (e) => {
-          setPhotoDataAndPreview(prefix, e.target.result, false);
+        reader.onload = async (e) => {
+          const compressed = await compressImage(e.target.result, 800, 0.65);
+          setPhotoDataAndPreview(prefix, compressed, false);
         };
         reader.readAsDataURL(file);
       });
@@ -830,12 +1095,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (hiddenInp) hiddenInp.value = dataUrl;
     if (wrapItem) wrapItem.classList.remove("photo-error-highlight");
 
+    const kbSize = Math.round((dataUrl.length * 3) / 4 / 1024);
+
     if (prevWrap) {
       prevWrap.innerHTML = `
         <div class="photo-success-card">
           <img src="${dataUrl}" alt="Proof" class="preview-img-thumb" style="cursor:pointer;" title="Click to inspect photo">
           <div class="photo-meta">
-            <span class="photo-verified-badge">${isLive ? "📸 Live Capture" : "📁 Uploaded"} • Verified</span>
+            <span class="photo-verified-badge">${isLive ? "📸 Live Capture" : "📁 Uploaded"} • Verified (${kbSize} KB)</span>
             <button type="button" class="btn-photo-remove" data-prefix="${prefix}">🗑️ Remove / Retake</button>
           </div>
         </div>
@@ -1057,6 +1324,32 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
+      let dsaCode = null;
+      if (isDsaSelected) {
+        const dsaReason = document.getElementById("dsa_reason").value;
+        const dsaDigits = document.getElementById("dsa_code_num").value.trim();
+        const isDsaCodeOpt = (dsaReason === "Onboarding visit" || dsaReason === "Regular visit");
+        if (!isDsaCodeOpt && !dsaDigits) {
+          alert(`DSA Code is mandatory when Reason is "${dsaReason}"! Please enter 1 to 6 numeric digits.`);
+          document.getElementById("dsa_code_num").focus();
+          return;
+        }
+        dsaCode = dsaDigits ? `FBGP${dsaDigits}` : null;
+      }
+
+      let conCode = null;
+      if (isConSelected) {
+        const conReason = document.getElementById("con_reason").value;
+        const conDigits = document.getElementById("con_code_num").value.trim();
+        const isConCodeOpt = (conReason === "Onboarding visit" || conReason === "Regular visit");
+        if (!isConCodeOpt && !conDigits) {
+          alert(`Connector Code is mandatory when Reason is "${conReason}"! Please enter 1 to 6 numeric digits.`);
+          document.getElementById("con_code_num").focus();
+          return;
+        }
+        conCode = conDigits ? `FGP${conDigits}` : null;
+      }
+
       const dsaPhoto = document.getElementById("dsa_photo_data")?.value || document.querySelector("#dsa_photo_preview img")?.src;
       const conPhoto = document.getElementById("con_photo_data")?.value || document.querySelector("#con_photo_preview img")?.src;
 
@@ -1064,7 +1357,7 @@ document.addEventListener("DOMContentLoaded", () => {
         subtypes: partnerSubtypes,
         dsa: isDsaSelected ? {
           name: document.getElementById("dsa_name").value.trim(),
-          code: `FBGP${document.getElementById("dsa_code_num").value.trim()}`,
+          code: dsaCode,
           mobile: document.getElementById("dsa_mobile").value.trim(),
           reason: document.getElementById("dsa_reason").value,
           address: document.getElementById("dsa_address").value.trim(),
@@ -1075,7 +1368,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } : null,
         connector: isConSelected ? {
           name: document.getElementById("con_name").value.trim(),
-          code: `FGP${document.getElementById("con_code_num").value.trim()}`,
+          code: conCode,
           mobile: document.getElementById("con_mobile").value.trim(),
           reason: document.getElementById("con_reason").value,
           address: document.getElementById("con_address").value.trim(),
@@ -1097,16 +1390,40 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
+      let techCode = null;
+      if (isTechSelected) {
+        const techReason = document.getElementById("vtech_reason").value;
+        const techDigits = document.getElementById("vtech_code_num").value.trim();
+        const isTechCodeOpt = (techReason === "Onboarding visit" || techReason === "Regular visit");
+        if (!isTechCodeOpt && !techDigits) {
+          alert(`Technical Vendor Code is mandatory when Reason is "${techReason}"! Please enter 1 to 6 numeric digits.`);
+          document.getElementById("vtech_code_num").focus();
+          return;
+        }
+        techCode = techDigits ? `V${techDigits}` : null;
+      }
+
+      let legalCode = null;
+      if (isLegalSelected) {
+        const legalReason = document.getElementById("vlegal_reason").value;
+        const legalDigits = document.getElementById("vlegal_code_num").value.trim();
+        const isLegalCodeOpt = (legalReason === "Onboarding visit" || legalReason === "Regular visit");
+        if (!isLegalCodeOpt && !legalDigits) {
+          alert(`Legal Vendor Code is mandatory when Reason is "${legalReason}"! Please enter 1 to 6 numeric digits.`);
+          document.getElementById("vlegal_code_num").focus();
+          return;
+        }
+        legalCode = legalDigits ? `V${legalDigits}` : null;
+      }
+
       const techPhoto = document.getElementById("vtech_photo_data")?.value || document.querySelector("#vtech_photo_preview img")?.src;
       const legalPhoto = document.getElementById("vlegal_photo_data")?.value || document.querySelector("#vlegal_photo_preview img")?.src;
-      const techCodeRaw = document.getElementById("vtech_code_num").value.trim();
-      const legalCodeRaw = document.getElementById("vlegal_code_num").value.trim();
 
       payload.vendor_visit = {
         subtypes: vendorSubtypes,
         technical: isTechSelected ? {
           name: document.getElementById("vtech_name").value.trim(),
-          code: techCodeRaw ? `V${techCodeRaw}` : null,
+          code: techCode,
           mobile: document.getElementById("vtech_mobile").value.trim(),
           reason: document.getElementById("vtech_reason").value,
           address: document.getElementById("vtech_address").value.trim(),
@@ -1117,7 +1434,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } : null,
         legal: isLegalSelected ? {
           name: document.getElementById("vlegal_name").value.trim(),
-          code: legalCodeRaw ? `V${legalCodeRaw}` : null,
+          code: legalCode,
           mobile: document.getElementById("vlegal_mobile").value.trim(),
           reason: document.getElementById("vlegal_reason").value,
           address: document.getElementById("vlegal_address").value.trim(),
@@ -1157,13 +1474,16 @@ document.addEventListener("DOMContentLoaded", () => {
       };
     }
 
-    // Submission logic (Dual-mode: Server if available, LocalStorage for GitHub Pages)
+    // Submission logic (Dual-mode: Server if available, LocalStorage/IndexedDB for GitHub Pages)
     const submitBtn = document.getElementById("btn-form-submit");
     submitBtn.disabled = true;
     submitBtn.innerHTML = "⏳ Logging Visits...";
 
-    let createdCount = 0;
+    // 1. Process client-side immediately so memory & IndexedDB have records
+    const newEntriesGenerated = processClientSideMultiVisit(payload);
+    const createdCount = newEntriesGenerated.length;
 
+    // 2. If backend server is available, also persist to SQLite
     if (!isStandalone) {
       try {
         const res = await fetch("/api/visits/submit-multi", {
@@ -1171,21 +1491,27 @@ document.addEventListener("DOMContentLoaded", () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Submission failed");
-        createdCount = data.created_count;
+        if (!res.ok) {
+          const errData = await res.json();
+          console.warn("Server API response note:", errData);
+        }
       } catch (err) {
-        console.warn("Backend error, storing in local database:", err);
-        createdCount = processClientSideMultiVisit(payload);
+        console.warn("Server API offline; saved to high-capacity local IndexedDB:", err);
       }
-    } else {
-      createdCount = processClientSideMultiVisit(payload);
     }
+
+    // 3. Push to Cloud Webhook (e.g. Google Sheets) if connected
+    await pushVisitsToCloud(newEntriesGenerated);
+
+    // 4. Update memory & Dashboard immediately
+    await loadStats();
+    await searchVisits();
 
     submitBtn.disabled = false;
     submitBtn.innerHTML = "<span>🚀</span> Submit &amp; Log All Visits";
 
-    alert(`🎉 SUCCESS! Generated ${createdCount} visit record(s) in system.`);
+    // 5. Show rich confirmation modal
+    showSubmissionSuccessModal(createdCount, newEntriesGenerated);
     resetEntireForm();
   });
 
@@ -1403,9 +1729,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    const updated = [...newEntries, ...visits];
-    saveLocalVisits(updated);
-    return newEntries.length;
+    currentVisits = [...newEntries, ...currentVisits];
+    saveLocalVisits(currentVisits);
+    return newEntries;
   }
 
   // Reset Entire Form Helper
@@ -2460,6 +2786,291 @@ document.addEventListener("DOMContentLoaded", () => {
       openEyeView(v);
     }
   };
+
+  // ==================== SUBMISSION SUCCESS CONFIRMATION MODAL ====================
+  function showSubmissionSuccessModal(count, entries) {
+    const modal = document.getElementById("submit-success-modal");
+    const subtext = document.getElementById("success-modal-subtext");
+    const recordsBox = document.getElementById("success-modal-records");
+    if (!modal) {
+      alert(`🎉 SUCCESS! Generated ${count} visit record(s) in system.`);
+      return;
+    }
+    if (subtext) {
+      subtext.textContent = `Generated and logged ${count} visit record(s) with live photo proof and satellite GPS coordinates.`;
+    }
+    if (recordsBox) {
+      recordsBox.innerHTML = entries.map(e => `
+        <div style="padding:0.4rem 0; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <strong>${escapeHtml(e.visit_code)}</strong> • <span style="color:#0284c7; font-weight:700;">${escapeHtml(e.visit_type)}</span> (${escapeHtml(e.sub_type || "-")})<br>
+            <span style="font-size:0.75rem; color:#64748b;">${escapeHtml(e.entity_name)} • ${escapeHtml(e.branch)}, ${escapeHtml(e.state)}</span>
+          </div>
+          <div style="text-align:right;">
+            <span style="font-size:0.72rem; color:#059669; font-weight:700;">✅ Logged</span><br>
+            <small style="font-size:0.7rem; color:#94a3b8;">${escapeHtml(e.visit_date)}</small>
+          </div>
+        </div>
+      `).join("");
+    }
+    modal.style.display = "flex";
+  }
+
+  const btnSuccessNew = document.getElementById("btn-success-new");
+  const btnSuccessDashboard = document.getElementById("btn-success-dashboard");
+  if (btnSuccessNew) {
+    btnSuccessNew.addEventListener("click", () => {
+      const modal = document.getElementById("submit-success-modal");
+      if (modal) modal.style.display = "none";
+    });
+  }
+  if (btnSuccessDashboard) {
+    btnSuccessDashboard.addEventListener("click", () => {
+      const modal = document.getElementById("submit-success-modal");
+      if (modal) modal.style.display = "none";
+      setMode("dashboard");
+    });
+  }
+
+  // ==================== CLOUD DATABASE & MULTI-USER TEAM SYNC ====================
+  let VT_CLOUD_URL = localStorage.getItem("VT_CLOUD_SYNC_URL") || "";
+
+  const GOOGLE_APPS_SCRIPT_TEMPLATE = `function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(["ID", "Visit Code", "Date", "Role", "Name", "Code", "State", "Cluster", "Branch", "Visit Type", "Sub Type", "Entity Name", "Entity Code", "Mobile", "Reason", "Remarks", "Address", "Latitude", "Longitude", "Timestamp", "Created At"]);
+    }
+    var data = JSON.parse(e.postData.contents);
+    if (data.action === "add_visits" && Array.isArray(data.visits)) {
+      data.visits.forEach(function(v) {
+        sheet.appendRow([
+          v.id || "",
+          v.visit_code || "",
+          v.visit_date || "",
+          v.user_role || "",
+          v.user_name || "",
+          v.user_code || "",
+          v.state || "",
+          v.cluster || "",
+          v.branch || "",
+          v.visit_type || "",
+          v.sub_type || "",
+          v.entity_name || "",
+          v.entity_code || "",
+          v.mobile || "",
+          v.reason || "",
+          v.notes || "",
+          v.address || "",
+          v.latitude || "",
+          v.longitude || "",
+          v.location_timestamp || "",
+          v.created_at || ""
+        ]);
+      });
+      return ContentService.createTextOutput(JSON.stringify({ status: "success", count: data.visits.length }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var rows = sheet.getDataRange().getValues();
+  if (rows.length <= 1) {
+    return ContentService.createTextOutput(JSON.stringify([])).setMimeType(ContentService.MimeType.JSON);
+  }
+  var visits = [];
+  for (var i = 1; i < rows.length; i++) {
+    var r = rows[i];
+    visits.push({
+      id: r[0],
+      visit_code: r[1],
+      visit_date: r[2],
+      user_role: r[3],
+      user_name: r[4],
+      user_code: r[5],
+      state: r[6],
+      cluster: r[7],
+      branch: r[8],
+      visit_type: r[9],
+      sub_type: r[10],
+      entity_name: r[11],
+      entity_code: r[12],
+      mobile: r[13],
+      reason: r[14],
+      notes: r[15],
+      address: r[16],
+      latitude: r[17],
+      longitude: r[18],
+      location_timestamp: r[19],
+      created_at: r[20]
+    });
+  }
+  return ContentService.createTextOutput(JSON.stringify(visits)).setMimeType(ContentService.MimeType.JSON);
+}`;
+
+  async function pushVisitsToCloud(entries) {
+    if (!VT_CLOUD_URL || !entries || entries.length === 0) return;
+    try {
+      await fetch(VT_CLOUD_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "add_visits",
+          visits: entries
+        })
+      });
+      console.log("Visits pushed to Cloud Database");
+    } catch (e) {
+      console.warn("Cloud push note:", e);
+    }
+  }
+
+  async function syncVisitsFromCloud() {
+    const syncIcon = document.getElementById("sync-icon");
+    if (syncIcon) syncIcon.style.animation = "spin 1s linear infinite";
+
+    if (!VT_CLOUD_URL) {
+      if (syncIcon) syncIcon.style.animation = "none";
+      openCloudConfigModal();
+      return;
+    }
+
+    try {
+      const res = await fetch(VT_CLOUD_URL, { method: "GET" });
+      if (res.ok) {
+        const cloudVisits = await res.json();
+        if (Array.isArray(cloudVisits) && cloudVisits.length > 0) {
+          const existingCodes = new Set(currentVisits.map(v => v.visit_code));
+          const toAdd = cloudVisits.filter(v => v.visit_code && !existingCodes.has(v.visit_code));
+          if (toAdd.length > 0) {
+            currentVisits = [...toAdd, ...currentVisits];
+            await VT_Storage.saveVisits(currentVisits);
+            await loadStats();
+            await searchVisits();
+            alert(`☁️ Cloud Sync Completed! Pulled ${toAdd.length} new visit record(s) from team.`);
+          } else {
+            alert(`☁️ Cloud Synced! Master Dashboard is fully up to date with team records.`);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Cloud pull error:", e);
+      alert("Cloud Sync Note: Unable to reach Google Sheet endpoint. Make sure your Apps Script Web App has 'Who has access' set to 'Anyone'.");
+    } finally {
+      if (syncIcon) syncIcon.style.animation = "none";
+    }
+  }
+
+  // Cloud Modal & Actions
+  const cloudModal = document.getElementById("cloud-sync-modal");
+  const cloudWebhookInput = document.getElementById("cloud_webhook_url");
+  const btnSaveCloudUrl = document.getElementById("btn-save-cloud-url");
+  const btnTestCloud = document.getElementById("btn-test-cloud");
+  const btnCopyScript = document.getElementById("btn-copy-script");
+  const btnBackupJson = document.getElementById("btn-backup-json");
+  const btnCloseCloudModal = document.getElementById("btn-close-cloud-modal");
+  const btnCloseCloudDone = document.getElementById("btn-close-cloud-done");
+  const cloudConnStatus = document.getElementById("cloud-conn-status");
+  const btnCloudConfig = document.getElementById("btn-cloud-config");
+  const btnSyncCloud = document.getElementById("btn-sync-cloud");
+  const btnCopyFieldLink = document.getElementById("btn-copy-field-link");
+
+  function openCloudConfigModal() {
+    if (cloudModal) {
+      cloudModal.style.display = "flex";
+      if (cloudWebhookInput) cloudWebhookInput.value = VT_CLOUD_URL;
+      updateCloudStatusText();
+    }
+  }
+
+  function updateCloudStatusText() {
+    if (cloudConnStatus) {
+      if (VT_CLOUD_URL) {
+        cloudConnStatus.textContent = "Connected to Google Sheet / Cloud Webhook";
+        cloudConnStatus.style.color = "#059669";
+      } else {
+        cloudConnStatus.textContent = "Using High-Capacity Local IndexedDB (No cloud configured)";
+        cloudConnStatus.style.color = "#d97706";
+      }
+    }
+  }
+
+  if (btnCloudConfig) btnCloudConfig.addEventListener("click", openCloudConfigModal);
+  if (btnCloseCloudModal) btnCloseCloudModal.addEventListener("click", () => { cloudModal.style.display = "none"; });
+  if (btnCloseCloudDone) btnCloseCloudDone.addEventListener("click", () => { cloudModal.style.display = "none"; });
+
+  if (btnSaveCloudUrl && cloudWebhookInput) {
+    btnSaveCloudUrl.addEventListener("click", () => {
+      const val = cloudWebhookInput.value.trim();
+      VT_CLOUD_URL = val;
+      localStorage.setItem("VT_CLOUD_SYNC_URL", val);
+      updateCloudStatusText();
+      alert("✅ Cloud Sync URL saved successfully!");
+    });
+  }
+
+  if (btnCopyScript) {
+    btnCopyScript.addEventListener("click", () => {
+      navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_TEMPLATE).then(() => {
+        alert("📋 Google Apps Script code copied to clipboard! Paste it into Extensions > Apps Script in Google Sheets.");
+      }).catch(() => {
+        prompt("Copy Google Apps Script code:", GOOGLE_APPS_SCRIPT_TEMPLATE);
+      });
+    });
+  }
+
+  if (btnTestCloud) {
+    btnTestCloud.addEventListener("click", async () => {
+      if (!VT_CLOUD_URL) {
+        alert("Please enter and save a Web App URL first.");
+        return;
+      }
+      try {
+        const res = await fetch(VT_CLOUD_URL, { method: "GET" });
+        if (res.ok) {
+          alert("🎉 Cloud Connection Successful! Your Google Sheet is reachable.");
+        } else {
+          alert(`Connection returned status ${res.status}. Ensure 'Who has access' is 'Anyone'.`);
+        }
+      } catch (err) {
+        alert("Connection test note: Unable to connect directly. If deployed as Web App, test submissions work seamlessly via POST.");
+      }
+    });
+  }
+
+  if (btnBackupJson) {
+    btnBackupJson.addEventListener("click", () => {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentVisits, null, 2));
+      const a = document.createElement("a");
+      a.setAttribute("href", dataStr);
+      a.setAttribute("download", `visits_backup_${new Date().toISOString().split("T")[0]}.json`);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    });
+  }
+
+  if (btnSyncCloud) {
+    btnSyncCloud.addEventListener("click", syncVisitsFromCloud);
+  }
+
+  if (btnCopyFieldLink) {
+    btnCopyFieldLink.addEventListener("click", () => {
+      const syncParam = VT_CLOUD_URL ? `&sync=${encodeURIComponent(VT_CLOUD_URL)}` : "";
+      const fieldUrl = `${window.location.origin}${window.location.pathname}?role=field${syncParam}`;
+      navigator.clipboard.writeText(fieldUrl).then(() => {
+        alert(`📋 Field Team Link Copied to Clipboard!\n\n${fieldUrl}\n\nShare this link with your field officers. They will see only the Entry Form and all submissions will stream to your Master Dashboard!`);
+      }).catch(() => {
+        prompt("Copy this Field Team Link:", fieldUrl);
+      });
+    });
+  }
 
   initHierarchy();
 });

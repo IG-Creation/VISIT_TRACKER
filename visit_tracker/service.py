@@ -195,9 +195,10 @@ class TrackerService:
                 if "DSA visit" in subtypes:
                     dsa = p_data.get("dsa") or {}
                     dsa_name = clean_name(dsa.get("name"), "DSA Name")
-                    dsa_code = validate_dsa_code(dsa.get("code"))
-                    dsa_mobile = validate_mobile(dsa.get("mobile"), "DSA Mobile Number")
                     reason = dsa.get("reason", "Regular visit")
+                    dsa_code_required = reason not in ["Onboarding visit", "Regular visit"]
+                    dsa_code = validate_dsa_code(dsa.get("code"), required=dsa_code_required)
+                    dsa_mobile = validate_mobile(dsa.get("mobile"), "DSA Mobile Number")
                     address = dsa.get("address")
                     photo = dsa.get("photo_data")
                     lat = float(dsa["latitude"]) if dsa.get("latitude") is not None and str(dsa.get("latitude")).strip() != "" else None
@@ -231,9 +232,10 @@ class TrackerService:
                 if "Connector Visit" in subtypes:
                     con = p_data.get("connector") or {}
                     con_name = clean_name(con.get("name"), "Connector Name")
-                    con_code = validate_connector_code(con.get("code"))
-                    con_mobile = validate_mobile(con.get("mobile"), "Connector Mobile Number")
                     reason = con.get("reason", "Regular visit")
+                    con_code_required = reason not in ["Onboarding visit", "Regular visit"]
+                    con_code = validate_connector_code(con.get("code"), required=con_code_required)
+                    con_mobile = validate_mobile(con.get("mobile"), "Connector Mobile Number")
                     address = con.get("address")
                     photo = con.get("photo_data")
                     lat = float(con["latitude"]) if con.get("latitude") is not None and str(con.get("latitude")).strip() != "" else None
@@ -273,9 +275,10 @@ class TrackerService:
                 if "Technical Vendor" in subtypes:
                     tech = v_data.get("technical") or {}
                     tech_name = clean_name(tech.get("name"), "Technical Vendor Name")
-                    tech_code = validate_vendor_code(tech.get("code"))
-                    tech_mobile = validate_mobile(tech.get("mobile"), "Technical Vendor Mobile Number")
                     reason = tech.get("reason", "Regular visit")
+                    tech_code_required = reason not in ["Onboarding visit", "Regular visit"]
+                    tech_code = validate_vendor_code(tech.get("code"), required=tech_code_required)
+                    tech_mobile = validate_mobile(tech.get("mobile"), "Technical Vendor Mobile Number")
                     address = tech.get("address")
                     photo = tech.get("photo_data")
                     lat = float(tech["latitude"]) if tech.get("latitude") is not None and str(tech.get("latitude")).strip() != "" else None
@@ -309,9 +312,10 @@ class TrackerService:
                 if "Legal Vendor" in subtypes:
                     legal = v_data.get("legal") or {}
                     legal_name = clean_name(legal.get("name"), "Legal Vendor Name")
-                    legal_code = validate_vendor_code(legal.get("code"))
-                    legal_mobile = validate_mobile(legal.get("mobile"), "Legal Vendor Mobile Number")
                     reason = legal.get("reason", "Regular visit")
+                    legal_code_required = reason not in ["Onboarding visit", "Regular visit"]
+                    legal_code = validate_vendor_code(legal.get("code"), required=legal_code_required)
+                    legal_mobile = validate_mobile(legal.get("mobile"), "Legal Vendor Mobile Number")
                     address = legal.get("address")
                     photo = legal.get("photo_data")
                     lat = float(legal["latitude"]) if legal.get("latitude") is not None and str(legal.get("latitude")).strip() != "" else None

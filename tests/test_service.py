@@ -124,6 +124,54 @@ class TestTrackerService(unittest.TestCase):
         self.assertEqual(created[1].visit_type, "Business Visit")
         self.assertEqual(created[1].entity_name, "Surat Textiles Trading")
 
+    def test_partner_and_vendor_code_optional_for_onboarding_and_regular(self):
+        payload = {
+            "user_role": "BDO",
+            "user_name": "Rohan Sharma",
+            "user_code": "FMF123456",
+            "state": "Maharashtra",
+            "cluster": "Mumbai Cluster",
+            "branch": "Andheri",
+            "visit_date": self.today,
+            "visit_types": ["Partner Visit", "Vendor Visit"],
+            "partner_visit": {
+                "subtypes": ["DSA visit", "Connector Visit"],
+                "dsa": {
+                    "name": "Apex Associates",
+                    "code": None,  # Optional for Onboarding visit
+                    "mobile": "9876543210",
+                    "reason": "Onboarding visit"
+                },
+                "connector": {
+                    "name": "Sunil Verma",
+                    "code": "FGP",  # Empty code prefix, optional for Regular visit
+                    "mobile": "9876543211",
+                    "reason": "Regular visit"
+                }
+            },
+            "vendor_visit": {
+                "subtypes": ["Technical Vendor", "Legal Vendor"],
+                "technical": {
+                    "name": "Prime Tech Engineers",
+                    "code": None,  # Optional for Onboarding visit
+                    "mobile": "9988776655",
+                    "reason": "Onboarding visit"
+                },
+                "legal": {
+                    "name": "Advocate Legal Chamber",
+                    "code": "V",  # Prefix only, optional for Regular visit
+                    "mobile": "9988776656",
+                    "reason": "Regular visit"
+                }
+            }
+        }
+        created = self.service.submit_multi_visits(payload)
+        self.assertEqual(len(created), 4)
+        self.assertIsNone(created[0].entity_code)
+        self.assertIsNone(created[1].entity_code)
+        self.assertIsNone(created[2].entity_code)
+        self.assertIsNone(created[3].entity_code)
+
     def test_validation_errors_prevent_invalid_submission(self):
         # Missing visit types
         with self.assertRaises(ValidationError):
