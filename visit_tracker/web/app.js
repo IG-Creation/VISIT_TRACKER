@@ -167,7 +167,8 @@ const INITIAL_DEMO_VISITS = [
 
 document.addEventListener("DOMContentLoaded", () => {
   let hierarchyData = EMBEDDED_HIERARCHY;
-  let currentVisits = [];
+  let masterVisitsCache = [];
+  let currentFilteredVisits = [];
   let mapInstances = {};
   let isStandalone = window.location.hostname.includes("github.io") || window.location.protocol === "file:" || !window.location.port;
 
@@ -301,23 +302,60 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Local Storage & In-Memory Retrieval
-  function getLocalVisits() {
-    if (currentVisits && currentVisits.length > 0) {
-      return currentVisits;
+  // Modal State Helpers (Guarantees visible & interactive modals across browsers)
+  function openModal(modal) {
+    if (modal) {
+      modal.style.display = "flex";
+      modal.classList.add("active");
     }
-    return VT_Storage._getFromLocalStorage();
+  }
+
+  function closeModal(modal) {
+    if (modal) {
+      modal.classList.remove("active");
+      modal.style.display = "none";
+    }
+  }
+
+  // Local Storage & In-Memory Retrieval
+  function getAllVisitsList() {
+    if (masterVisitsCache && masterVisitsCache.length > 0) {
+      return [...masterVisitsCache];
+    }
+    const fromStorage = VT_Storage._getFromLocalStorage();
+    if (fromStorage && fromStorage.length > 0) {
+      masterVisitsCache = [...fromStorage];
+    }
+    return [...masterVisitsCache];
+  }
+
+  function saveAllVisitsList(visits) {
+    masterVisitsCache = Array.isArray(visits) ? [...visits] : [];
+    VT_Storage.saveVisits(masterVisitsCache);
+  }
+
+  function getLocalVisits() {
+    return getAllVisitsList();
   }
 
   function saveLocalVisits(visits) {
-    currentVisits = visits;
-    VT_Storage.saveVisits(visits);
+    saveAllVisitsList(visits);
+  }
+
+  function getExportVisits() {
+    if (currentFilteredVisits && currentFilteredVisits.length > 0) {
+      return currentFilteredVisits;
+    }
+    return getAllVisitsList();
   }
 
   // Initialize data from IndexedDB
   VT_Storage.getAllVisits().then(visits => {
     if (visits && visits.length > 0) {
-      currentVisits = visits;
+      masterVisitsCache = visits;
+      if (document.getElementById("view-dashboard") && document.getElementById("view-dashboard").style.display !== "none") {
+        loadDashboardData();
+      }
     }
   });
 
@@ -411,12 +449,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const masterLockBadge = document.getElementById("master-lock-badge");
 
   function isMasterAuthenticated() {
-    return sessionStorage.getItem("VT_MASTER_AUTH") === "1" || localStorage.getItem("VT_MASTER_AUTH") === "1";
+    return true; // Direct access for Master Dashboard
   }
 
   function openMasterAuthModal() {
     if (masterAuthModal) {
-      masterAuthModal.style.display = "flex";
+      openModal(masterAuthModal);
       if (masterPasscodeInput) {
         masterPasscodeInput.value = "";
         masterPasscodeInput.focus();
@@ -425,23 +463,13 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function closeMasterAuthModal() {
-    if (masterAuthModal) masterAuthModal.style.display = "none";
+    if (masterAuthModal) closeModal(masterAuthModal);
   }
 
   if (btnUnlockMaster) {
     btnUnlockMaster.addEventListener("click", () => {
-      const code = masterPasscodeInput ? masterPasscodeInput.value.trim() : "";
-      if (code === "master123" || code === "admin" || code === "123456" || code === "master") {
-        sessionStorage.setItem("VT_MASTER_AUTH", "1");
-        if (chkRememberMaster && chkRememberMaster.checked) {
-          localStorage.setItem("VT_MASTER_AUTH", "1");
-        }
-        if (masterLockBadge) masterLockBadge.textContent = "🔓";
-        closeMasterAuthModal();
-        setMode("dashboard");
-      } else {
-        alert("Incorrect Master Passcode! Default passcode is 'master123'.");
-      }
+      closeMasterAuthModal();
+      setMode("dashboard");
     });
   }
 
@@ -467,20 +495,18 @@ document.addEventListener("DOMContentLoaded", () => {
   // ==================== MODE SWITCHING ====================
   function setMode(mode) {
     if (mode === "dashboard") {
-      if (!isMasterAuthenticated()) {
-        openMasterAuthModal();
-        return;
-      }
       btnModeDashboard.classList.add("active");
       btnModeForm.classList.remove("active");
       viewForm.style.display = "none";
       viewDashboard.style.display = "block";
       loadDashboardData();
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
       btnModeForm.classList.add("active");
       btnModeDashboard.classList.remove("active");
       viewForm.style.display = "block";
       viewDashboard.style.display = "none";
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }
 
@@ -495,24 +521,16 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnModeDashboard) btnModeDashboard.style.display = "none";
   }
 
-  if (urlParams.get("role") === "master" || urlParams.get("passcode") === "master123") {
-    sessionStorage.setItem("VT_MASTER_AUTH", "1");
-    if (masterLockBadge) masterLockBadge.textContent = "🔓";
-  }
-
   if (urlParams.get("sync")) {
     const incomingSync = decodeURIComponent(urlParams.get("sync"));
     if (incomingSync.startsWith("http")) {
       localStorage.setItem("VT_CLOUD_SYNC_URL", incomingSync);
+      VT_CLOUD_URL = incomingSync;
     }
   }
 
-  if (urlParams.get("view") === "dashboard") {
+  if (urlParams.get("view") === "dashboard" && !isFieldRole) {
     setMode("dashboard");
-  }
-
-  if (isMasterAuthenticated() && masterLockBadge) {
-    masterLockBadge.textContent = "🔓";
   }
 
   // ==================== DATE SETUP & VALIDATION ====================
@@ -998,7 +1016,7 @@ document.addEventListener("DOMContentLoaded", () => {
       cameraVideo.srcObject = null;
     }
     if (liveCameraModal) {
-      liveCameraModal.style.display = "none";
+      closeModal(liveCameraModal);
     }
     activeCamPrefix = null;
   }
@@ -1041,10 +1059,10 @@ document.addEventListener("DOMContentLoaded", () => {
       liveBtn.addEventListener("click", async () => {
         activeCamPrefix = prefix;
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          liveCameraModal.style.display = "flex";
+          openModal(liveCameraModal);
           const ok = await startCameraStream(currentFacingMode);
           if (!ok) {
-            liveCameraModal.style.display = "none";
+            closeModal(liveCameraModal);
             if (camInp) camInp.click();
           }
         } else if (camInp) {
@@ -1127,7 +1145,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function openPhotoViewer(src, title) {
     const modal = document.createElement("div");
-    modal.className = "modal-overlay";
+    modal.className = "modal-overlay active";
     modal.style.display = "flex";
     modal.innerHTML = `
       <div class="modal-3d" style="max-width: 600px; padding: 1.25rem; text-align: center;">
@@ -1729,8 +1747,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    currentVisits = [...newEntries, ...currentVisits];
-    saveLocalVisits(currentVisits);
+    const allExisting = getAllVisitsList();
+    const updated = [...newEntries, ...allExisting];
+    saveAllVisitsList(updated);
     return newEntries;
   }
 
@@ -1823,14 +1842,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!isStandalone) {
       try {
         const res = await fetch("/api/stats");
-        const stats = await res.json();
-        total = stats.total_visits || 0;
-        cust = stats.by_type?.["Customer Visit"] || 0;
-        partner = stats.by_type?.["Partner Visit"] || 0;
-        vendor = stats.by_type?.["Vendor Visit"] || 0;
-        biz = (stats.by_type?.["Business Visit"] || 0) + (stats.by_type?.["Other Visit"] || 0);
+        if (res.ok) {
+          const stats = await res.json();
+          total = stats.total_visits || 0;
+          cust = stats.by_type?.["Customer Visit"] || 0;
+          partner = stats.by_type?.["Partner Visit"] || 0;
+          vendor = stats.by_type?.["Vendor Visit"] || 0;
+          biz = (stats.by_type?.["Business Visit"] || 0) + (stats.by_type?.["Other Visit"] || 0);
+        } else {
+          throw new Error("Stats API failed");
+        }
       } catch (e) {
-        const visits = getLocalVisits();
+        const visits = getAllVisitsList();
         total = visits.length;
         cust = visits.filter(v => v.visit_type === "Customer Visit").length;
         partner = visits.filter(v => v.visit_type === "Partner Visit").length;
@@ -1838,7 +1861,7 @@ document.addEventListener("DOMContentLoaded", () => {
         biz = visits.filter(v => v.visit_type === "Business Visit" || v.visit_type === "Other Visit").length;
       }
     } else {
-      const visits = getLocalVisits();
+      const visits = getAllVisitsList();
       total = visits.length;
       cust = visits.filter(v => v.visit_type === "Customer Visit").length;
       partner = visits.filter(v => v.visit_type === "Partner Visit").length;
@@ -1880,16 +1903,18 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function searchVisits() {
-    const fromDate = fltFromDate.value;
-    const toDate = fltToDate.value;
-    const role = fltRole.value;
-    const state = fltState.value;
-    const cluster = fltCluster.value;
-    const branch = fltBranch.value;
-    const type = fltType.value;
-    const search = fltSearch.value.trim().toLowerCase();
+    const fromDate = fltFromDate ? fltFromDate.value : "";
+    const toDate = fltToDate ? fltToDate.value : "";
+    const role = fltRole ? fltRole.value : "";
+    const state = fltState ? fltState.value : "";
+    const cluster = fltCluster ? fltCluster.value : "";
+    const branch = fltBranch ? fltBranch.value : "";
+    const type = fltType ? fltType.value : "";
+    const search = fltSearch ? fltSearch.value.trim().toLowerCase() : "";
 
-    visitsTableBody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 2rem;">Searching visits...</td></tr>`;
+    if (visitsTableBody) {
+      visitsTableBody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 2rem;">Searching visits...</td></tr>`;
+    }
 
     if (!isStandalone) {
       try {
@@ -1904,16 +1929,20 @@ document.addEventListener("DOMContentLoaded", () => {
         if (search) params.append("query", search);
 
         const res = await fetch(`/api/visits?${params.toString()}`);
-        currentVisits = await res.json();
-        renderVisitsTable(currentVisits);
-        liveVisitsCounter.innerHTML = `<span>📊</span> Displaying <strong>${currentVisits.length}</strong> Visits`;
-        return;
+        if (res.ok) {
+          currentFilteredVisits = await res.json();
+          renderVisitsTable(currentFilteredVisits);
+          if (liveVisitsCounter) {
+            liveVisitsCounter.innerHTML = `<span>📊</span> Displaying <strong>${currentFilteredVisits.length}</strong> Visits`;
+          }
+          return;
+        }
       } catch (e) {
         // Fall back to client storage
       }
     }
 
-    let list = getLocalVisits();
+    let list = getAllVisitsList();
     if (fromDate) list = list.filter(v => v.visit_date >= fromDate);
     if (toDate) list = list.filter(v => v.visit_date <= toDate);
     if (role) list = list.filter(v => v.user_role === role);
@@ -1935,9 +1964,11 @@ document.addEventListener("DOMContentLoaded", () => {
       );
     }
 
-    currentVisits = list;
-    renderVisitsTable(currentVisits);
-    liveVisitsCounter.innerHTML = `<span>📊</span> Displaying <strong>${currentVisits.length}</strong> Visits`;
+    currentFilteredVisits = list;
+    renderVisitsTable(currentFilteredVisits);
+    if (liveVisitsCounter) {
+      liveVisitsCounter.innerHTML = `<span>📊</span> Displaying <strong>${currentFilteredVisits.length}</strong> Visits`;
+    }
   }
 
   btnFltSearch.addEventListener("click", searchVisits);
@@ -2091,10 +2122,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function attachTableActionListeners() {
     document.querySelectorAll(".btn-action-icon").forEach(btn => {
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", async () => {
         const action = btn.getAttribute("data-action");
         const id = btn.getAttribute("data-id");
-        const visit = currentVisits.find(v => v.id == id);
+        const visit = getAllVisitsList().find(v => v.id == id);
         if (!visit) return;
 
         if (action === "view") {
@@ -2107,8 +2138,9 @@ document.addEventListener("DOMContentLoaded", () => {
               fetch(`/api/visits/${visit.id}`, { method: "DELETE" })
                 .catch(() => {});
             }
-            const visits = getLocalVisits().filter(v => v.id != visit.id);
-            saveLocalVisits(visits);
+            const visits = getAllVisitsList().filter(v => v.id != visit.id);
+            saveAllVisitsList(visits);
+            await loadStats();
             searchVisits();
           }
         }
@@ -2258,15 +2290,16 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    const visits = getLocalVisits().map(v => {
+    const visits = getAllVisitsList().map(v => {
       if (v.id == id) {
         return { ...v, ...updates };
       }
       return v;
     });
-    saveLocalVisits(visits);
+    saveAllVisitsList(visits);
 
     closeModal(editModal);
+    await loadStats();
     searchVisits();
   });
 
@@ -2419,11 +2452,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function downloadExcelFile(visits) {
-    if (!visits || visits.length === 0) {
+    const dataToExport = (visits && visits.length > 0) ? visits : getExportVisits();
+    if (!dataToExport || dataToExport.length === 0) {
       alert("No visit records available to download.");
       return;
     }
-    const xmlContent = generateExcelXml(visits);
+    const xmlContent = generateExcelXml(dataToExport);
     const blob = new Blob([xmlContent], { type: "application/vnd.ms-excel;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -2440,7 +2474,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnExportExcel = document.getElementById("btn-export-excel") || document.getElementById("btn-export-csv");
   if (btnExportExcel) {
     btnExportExcel.addEventListener("click", () => {
-      downloadExcelFile(currentVisits);
+      downloadExcelFile(getExportVisits());
     });
   }
 
@@ -2591,13 +2625,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const modal = document.getElementById("send-email-modal");
     if (!modal) return;
 
+    const exportVisits = getExportVisits();
     const countBadge = document.getElementById("email-summary-count-badge");
-    if (countBadge) countBadge.textContent = `${currentVisits.length} Records`;
+    if (countBadge) countBadge.textContent = `${exportVisits.length} Records`;
 
     const statsGrid = document.getElementById("email-summary-stats-grid");
     if (statsGrid) {
       const typeCounts = {};
-      currentVisits.forEach(v => {
+      exportVisits.forEach(v => {
         const t = v.visit_type || "Other";
         typeCounts[t] = (typeCounts[t] || 0) + 1;
       });
@@ -2656,14 +2691,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function generateEmailTextBody(subject, customNote) {
+    const exportVisits = getExportVisits();
     const todayStr = new Date().toLocaleDateString("en-IN", { dateStyle: "long" });
-    let body = `VISIT TRACKER - EXECUTIVE ACTIVITY REPORT\nDate: ${todayStr}\nTotal Visits Logged: ${currentVisits.length}\n`;
+    let body = `VISIT TRACKER - EXECUTIVE ACTIVITY REPORT\nDate: ${todayStr}\nTotal Visits Logged: ${exportVisits.length}\n`;
     if (customNote) {
       body += `\nNote / Message:\n${customNote}\n`;
     }
     body += `\nSummary by Visit Type:\n`;
     const typeCounts = {};
-    currentVisits.forEach(v => {
+    exportVisits.forEach(v => {
       const t = v.visit_type || "Other Visit";
       typeCounts[t] = (typeCounts[t] || 0) + 1;
     });
@@ -2671,7 +2707,7 @@ document.addEventListener("DOMContentLoaded", () => {
       body += `• ${k}: ${cnt} visits\n`;
     }
     body += `\nActivity Highlights (Recent Records):\n`;
-    currentVisits.slice(0, 5).forEach((v, idx) => {
+    exportVisits.slice(0, 5).forEach((v, idx) => {
       body += `${idx + 1}. [${v.visit_code || "VT"}] ${v.visit_date} - ${v.user_name} (${v.user_role}) visited ${v.entity_name} at ${v.branch}, ${v.state}. Remarks: ${v.notes || "None"}. Status: ${v.status || "Logged"}\n`;
     });
     body += `\nAttached file: visit_tracker_report.xls contains full data with GPS satellite coordinates, timestamps, branch hierarchy, verification status, and tracking remarks.\n\nGenerated via Visit Tracker Enterprise System.`;
@@ -2695,6 +2731,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       activeRecipients.forEach(em => saveEmailToHistory(em));
 
+      const exportVisits = getExportVisits();
       const subject = document.getElementById("email-subject-input")?.value.trim() || "Visit Tracker Executive Summary & Master Excel Report";
       const customNote = document.getElementById("email-custom-note")?.value.trim() || "";
       const emailBody = generateEmailTextBody(subject, customNote);
@@ -2703,7 +2740,7 @@ document.addEventListener("DOMContentLoaded", () => {
       btnConfirmSendEmail.innerHTML = "⏳ Dispatching...";
 
       // Trigger excel download
-      downloadExcelFile(currentVisits);
+      downloadExcelFile(exportVisits);
 
       // 1. If backend server is active
       if (!isStandalone) {
@@ -2759,7 +2796,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <div style="background:#ecfdf5; border:1px solid #10b981; border-radius:8px; padding:12px; margin-top:10px;">
             <strong style="color:#065f46; font-size:0.88rem;">✓ REPORT PREPARED &amp; DISPATCHED!</strong>
             <p style="margin:4px 0 8px; font-size:0.8rem; color:#047857;">
-              Populated Excel report (${currentVisits.length} visits) generated and dispatched to:<br>
+              Populated Excel report (${exportVisits.length} visits) generated and dispatched to:<br>
               <strong>${activeRecipients.map(e => escapeHtml(e)).join(", ")}</strong>.
             </p>
             <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
@@ -2783,7 +2820,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
 
-      alert(`🎉 SUCCESS!\n\nMaster Excel report (${currentVisits.length} records) downloaded.\nDispatched to: ${activeRecipients.join(", ")}`);
+      alert(`🎉 SUCCESS!\n\nMaster Excel report (${exportVisits.length} records) downloaded.\nDispatched to: ${activeRecipients.join(", ")}`);
     });
   }
 
@@ -2797,10 +2834,11 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("email-input-field")?.focus();
         return;
       }
+      const exportVisits = getExportVisits();
       const subject = document.getElementById("email-subject-input")?.value.trim() || "Visit Tracker Executive Summary & Master Excel Report";
       const customNote = document.getElementById("email-custom-note")?.value.trim() || "";
       const body = generateEmailTextBody(subject, customNote);
-      downloadExcelFile(currentVisits);
+      downloadExcelFile(exportVisits);
       const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(activeRecipients.join(","))}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       window.open(gmailUrl, "_blank");
     });
@@ -2816,10 +2854,11 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("email-input-field")?.focus();
         return;
       }
+      const exportVisits = getExportVisits();
       const subject = document.getElementById("email-subject-input")?.value.trim() || "Visit Tracker Executive Summary & Master Excel Report";
       const customNote = document.getElementById("email-custom-note")?.value.trim() || "";
       const body = generateEmailTextBody(subject, customNote);
-      downloadExcelFile(currentVisits);
+      downloadExcelFile(exportVisits);
       const outlookUrl = `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(activeRecipients.join(";"))}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       window.open(outlookUrl, "_blank");
     });
@@ -2835,10 +2874,11 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("email-input-field")?.focus();
         return;
       }
+      const exportVisits = getExportVisits();
       const subject = document.getElementById("email-subject-input")?.value.trim() || "Visit Tracker Executive Summary & Master Excel Report";
       const customNote = document.getElementById("email-custom-note")?.value.trim() || "";
       const body = generateEmailTextBody(subject, customNote);
-      downloadExcelFile(currentVisits);
+      downloadExcelFile(exportVisits);
       const mailtoUrl = `mailto:${activeRecipients.join(",")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       window.location.href = mailtoUrl;
     });
@@ -2852,20 +2892,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (modal) closeModal(modal);
     });
   });
-
-  function openModal(modal) {
-    if (modal) {
-      modal.style.display = "flex";
-      modal.classList.add("active");
-    }
-  }
-
-  function closeModal(modal) {
-    if (modal) {
-      modal.classList.remove("active");
-      modal.style.display = "none";
-    }
-  }
 
   // Close modals when clicking backdrop overlay
   document.querySelectorAll(".modal-overlay").forEach(overlay => {
@@ -2885,7 +2911,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   window.viewPhotoModal = (id) => {
-    const v = currentVisits.find(item => item.id == id);
+    const v = getAllVisitsList().find(item => item.id == id);
     if (v && v.photo_data) {
       openEyeView(v);
     }
@@ -2917,7 +2943,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       `).join("");
     }
-    modal.style.display = "flex";
+    openModal(modal);
   }
 
   const btnSuccessNew = document.getElementById("btn-success-new");
@@ -2925,13 +2951,13 @@ document.addEventListener("DOMContentLoaded", () => {
   if (btnSuccessNew) {
     btnSuccessNew.addEventListener("click", () => {
       const modal = document.getElementById("submit-success-modal");
-      if (modal) modal.style.display = "none";
+      if (modal) closeModal(modal);
     });
   }
   if (btnSuccessDashboard) {
     btnSuccessDashboard.addEventListener("click", () => {
       const modal = document.getElementById("submit-success-modal");
-      if (modal) modal.style.display = "none";
+      if (modal) closeModal(modal);
       setMode("dashboard");
     });
   }
@@ -3061,11 +3087,12 @@ function doGet(e) {
       if (res.ok) {
         const cloudVisits = await res.json();
         if (Array.isArray(cloudVisits) && cloudVisits.length > 0) {
-          const existingCodes = new Set(currentVisits.map(v => v.visit_code));
+          const allExisting = getAllVisitsList();
+          const existingCodes = new Set(allExisting.map(v => v.visit_code));
           const toAdd = cloudVisits.filter(v => v.visit_code && !existingCodes.has(v.visit_code));
           if (toAdd.length > 0) {
-            currentVisits = [...toAdd, ...currentVisits];
-            await VT_Storage.saveVisits(currentVisits);
+            const updated = [...toAdd, ...allExisting];
+            saveAllVisitsList(updated);
             await loadStats();
             await searchVisits();
             alert(`☁️ Cloud Sync Completed! Pulled ${toAdd.length} new visit record(s) from team.`);
@@ -3098,7 +3125,7 @@ function doGet(e) {
 
   function openCloudConfigModal() {
     if (cloudModal) {
-      cloudModal.style.display = "flex";
+      openModal(cloudModal);
       if (cloudWebhookInput) cloudWebhookInput.value = VT_CLOUD_URL;
       updateCloudStatusText();
     }
@@ -3117,8 +3144,8 @@ function doGet(e) {
   }
 
   if (btnCloudConfig) btnCloudConfig.addEventListener("click", openCloudConfigModal);
-  if (btnCloseCloudModal) btnCloseCloudModal.addEventListener("click", () => { cloudModal.style.display = "none"; });
-  if (btnCloseCloudDone) btnCloseCloudDone.addEventListener("click", () => { cloudModal.style.display = "none"; });
+  if (btnCloseCloudModal) btnCloseCloudModal.addEventListener("click", () => closeModal(cloudModal));
+  if (btnCloseCloudDone) btnCloseCloudDone.addEventListener("click", () => closeModal(cloudModal));
 
   if (btnSaveCloudUrl && cloudWebhookInput) {
     btnSaveCloudUrl.addEventListener("click", () => {
@@ -3161,7 +3188,8 @@ function doGet(e) {
 
   if (btnBackupJson) {
     btnBackupJson.addEventListener("click", () => {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentVisits, null, 2));
+      const allVisits = getAllVisitsList();
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allVisits, null, 2));
       const a = document.createElement("a");
       a.setAttribute("href", dataStr);
       a.setAttribute("download", `visits_backup_${new Date().toISOString().split("T")[0]}.json`);
