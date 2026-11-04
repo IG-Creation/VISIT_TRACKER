@@ -2655,9 +2655,38 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function generateEmailTextBody(subject, customNote) {
+    const todayStr = new Date().toLocaleDateString("en-IN", { dateStyle: "long" });
+    let body = `VISIT TRACKER - EXECUTIVE ACTIVITY REPORT\nDate: ${todayStr}\nTotal Visits Logged: ${currentVisits.length}\n`;
+    if (customNote) {
+      body += `\nNote / Message:\n${customNote}\n`;
+    }
+    body += `\nSummary by Visit Type:\n`;
+    const typeCounts = {};
+    currentVisits.forEach(v => {
+      const t = v.visit_type || "Other Visit";
+      typeCounts[t] = (typeCounts[t] || 0) + 1;
+    });
+    for (const [k, cnt] of Object.entries(typeCounts)) {
+      body += `• ${k}: ${cnt} visits\n`;
+    }
+    body += `\nActivity Highlights (Recent Records):\n`;
+    currentVisits.slice(0, 5).forEach((v, idx) => {
+      body += `${idx + 1}. [${v.visit_code || "VT"}] ${v.visit_date} - ${v.user_name} (${v.user_role}) visited ${v.entity_name} at ${v.branch}, ${v.state}. Remarks: ${v.notes || "None"}. Status: ${v.status || "Logged"}\n`;
+    });
+    body += `\nAttached file: visit_tracker_report.xls contains full data with GPS satellite coordinates, timestamps, branch hierarchy, verification status, and tracking remarks.\n\nGenerated via Visit Tracker Enterprise System.`;
+    return body;
+  }
+
   const btnConfirmSendEmail = document.getElementById("btn-confirm-send-email");
   if (btnConfirmSendEmail) {
     btnConfirmSendEmail.addEventListener("click", async () => {
+      // Auto-add any pending email typed into the input field
+      const pendingInput = document.getElementById("email-input-field")?.value.trim();
+      if (pendingInput) {
+        addEmailsFromInput();
+      }
+
       if (activeRecipients.length === 0) {
         alert("⚠️ Please enter or select at least one recipient email ID before sending!");
         document.getElementById("email-input-field")?.focus();
@@ -2666,8 +2695,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       activeRecipients.forEach(em => saveEmailToHistory(em));
 
-      const subject = document.getElementById("email-subject-input")?.value.trim() || "Visit Tracker Report";
+      const subject = document.getElementById("email-subject-input")?.value.trim() || "Visit Tracker Executive Summary & Master Excel Report";
       const customNote = document.getElementById("email-custom-note")?.value.trim() || "";
+      const emailBody = generateEmailTextBody(subject, customNote);
 
       btnConfirmSendEmail.disabled = true;
       btnConfirmSendEmail.innerHTML = "⏳ Dispatching...";
@@ -2675,6 +2705,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // Trigger excel download
       downloadExcelFile(currentVisits);
 
+      // 1. If backend server is active
       if (!isStandalone) {
         try {
           await fetch("/api/send-email", {
@@ -2699,6 +2730,25 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
+      // 2. If Cloud Webhook (Google Sheets) is active
+      if (VT_CLOUD_URL) {
+        try {
+          await fetch(VT_CLOUD_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "send_email",
+              recipients: activeRecipients,
+              subject: subject,
+              body: emailBody
+            })
+          });
+        } catch (e) {
+          console.warn("Cloud email push note:", e);
+        }
+      }
+
       btnConfirmSendEmail.disabled = false;
       btnConfirmSendEmail.innerHTML = "<span>🚀</span> Send Email Now";
 
@@ -2706,48 +2756,89 @@ document.addEventListener("DOMContentLoaded", () => {
       if (statusBanner) {
         statusBanner.style.display = "block";
         statusBanner.innerHTML = `
-          <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:var(--radius-md); padding:0.75rem 1rem; color:#065f46;">
-            <strong>✓ REPORT DISPATCHED SUCCESSFULLY!</strong>
-            <p style="margin:4px 0 0; font-size:0.8rem;">
-              Executive summary and populated Excel report (${currentVisits.length} visits) dispatched to:<br>
+          <div style="background:#ecfdf5; border:1px solid #10b981; border-radius:8px; padding:12px; margin-top:10px;">
+            <strong style="color:#065f46; font-size:0.88rem;">✓ REPORT PREPARED &amp; DISPATCHED!</strong>
+            <p style="margin:4px 0 8px; font-size:0.8rem; color:#047857;">
+              Populated Excel report (${currentVisits.length} visits) generated and dispatched to:<br>
               <strong>${activeRecipients.map(e => escapeHtml(e)).join(", ")}</strong>.
             </p>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
+              <button type="button" class="btn btn-reset btn-quick-gmail" style="background:#fff; color:#dc2626; border-color:#fca5a5; padding:4px 10px; font-size:0.75rem;">Open in Gmail ↗</button>
+              <button type="button" class="btn btn-reset btn-quick-outlook" style="background:#fff; color:#2563eb; border-color:#93c5fd; padding:4px 10px; font-size:0.75rem;">Open in Outlook ↗</button>
+              <button type="button" class="btn btn-reset btn-quick-mailto" style="background:#fff; color:#334155; border-color:#cbd5e1; padding:4px 10px; font-size:0.75rem;">Open in Mail App ↗</button>
+            </div>
           </div>
         `;
+        statusBanner.querySelector(".btn-quick-gmail")?.addEventListener("click", () => {
+          const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(activeRecipients.join(","))}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+          window.open(gmailUrl, "_blank");
+        });
+        statusBanner.querySelector(".btn-quick-outlook")?.addEventListener("click", () => {
+          const outlookUrl = `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(activeRecipients.join(";"))}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+          window.open(outlookUrl, "_blank");
+        });
+        statusBanner.querySelector(".btn-quick-mailto")?.addEventListener("click", () => {
+          const mailtoUrl = `mailto:${activeRecipients.join(",")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+          window.location.href = mailtoUrl;
+        });
       }
 
-      alert(`🎉 Report successfully dispatched to:\n${activeRecipients.join("\n")}\n\nExcel report downloaded and attached.`);
-      setTimeout(() => {
-        closeModal(document.getElementById("send-email-modal"));
-      }, 1500);
+      alert(`🎉 SUCCESS!\n\nMaster Excel report (${currentVisits.length} records) downloaded.\nDispatched to: ${activeRecipients.join(", ")}`);
+    });
+  }
+
+  const btnOpenGmail = document.getElementById("btn-open-gmail");
+  if (btnOpenGmail) {
+    btnOpenGmail.addEventListener("click", () => {
+      const pendingInput = document.getElementById("email-input-field")?.value.trim();
+      if (pendingInput) addEmailsFromInput();
+      if (activeRecipients.length === 0) {
+        alert("Please enter or select at least one recipient email address first.");
+        document.getElementById("email-input-field")?.focus();
+        return;
+      }
+      const subject = document.getElementById("email-subject-input")?.value.trim() || "Visit Tracker Executive Summary & Master Excel Report";
+      const customNote = document.getElementById("email-custom-note")?.value.trim() || "";
+      const body = generateEmailTextBody(subject, customNote);
+      downloadExcelFile(currentVisits);
+      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(activeRecipients.join(","))}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.open(gmailUrl, "_blank");
+    });
+  }
+
+  const btnOpenOutlook = document.getElementById("btn-open-outlook");
+  if (btnOpenOutlook) {
+    btnOpenOutlook.addEventListener("click", () => {
+      const pendingInput = document.getElementById("email-input-field")?.value.trim();
+      if (pendingInput) addEmailsFromInput();
+      if (activeRecipients.length === 0) {
+        alert("Please enter or select at least one recipient email address first.");
+        document.getElementById("email-input-field")?.focus();
+        return;
+      }
+      const subject = document.getElementById("email-subject-input")?.value.trim() || "Visit Tracker Executive Summary & Master Excel Report";
+      const customNote = document.getElementById("email-custom-note")?.value.trim() || "";
+      const body = generateEmailTextBody(subject, customNote);
+      downloadExcelFile(currentVisits);
+      const outlookUrl = `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(activeRecipients.join(";"))}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.open(outlookUrl, "_blank");
     });
   }
 
   const btnOpenMailto = document.getElementById("btn-open-mailto");
   if (btnOpenMailto) {
     btnOpenMailto.addEventListener("click", () => {
+      const pendingInput = document.getElementById("email-input-field")?.value.trim();
+      if (pendingInput) addEmailsFromInput();
       if (activeRecipients.length === 0) {
         alert("Please enter or select at least one recipient email address first.");
+        document.getElementById("email-input-field")?.focus();
         return;
       }
-      const subject = document.getElementById("email-subject-input")?.value.trim() || "Visit Tracker Report";
+      const subject = document.getElementById("email-subject-input")?.value.trim() || "Visit Tracker Executive Summary & Master Excel Report";
       const customNote = document.getElementById("email-custom-note")?.value.trim() || "";
-
-      let body = `Visit Tracker Executive Activity Report\nDate: ${new Date().toLocaleDateString()}\nTotal Visits: ${currentVisits.length}\n`;
-      if (customNote) body += `\nNote: ${customNote}\n`;
-      body += `\nSummary by Type:\n`;
-
-      const typeCounts = {};
-      currentVisits.forEach(v => {
-        const t = v.visit_type || "Other";
-        typeCounts[t] = (typeCounts[t] || 0) + 1;
-      });
-      for (const [k, v] of Object.entries(typeCounts)) {
-        body += `- ${k}: ${v} visits\n`;
-      }
-
-      body += `\nPlease see attached visits_master_report.xls for all GPS coordinates, timestamps, remarks, and user records.`;
-
+      const body = generateEmailTextBody(subject, customNote);
+      downloadExcelFile(currentVisits);
       const mailtoUrl = `mailto:${activeRecipients.join(",")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       window.location.href = mailtoUrl;
     });
@@ -2763,12 +2854,25 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   function openModal(modal) {
-    if (modal) modal.classList.add("active");
+    if (modal) {
+      modal.style.display = "flex";
+      modal.classList.add("active");
+    }
   }
 
   function closeModal(modal) {
-    if (modal) modal.classList.remove("active");
+    if (modal) {
+      modal.classList.remove("active");
+      modal.style.display = "none";
+    }
   }
+
+  // Close modals when clicking backdrop overlay
+  document.querySelectorAll(".modal-overlay").forEach(overlay => {
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) closeModal(overlay);
+    });
+  });
 
   function escapeHtml(str) {
     if (!str) return "";
@@ -2869,6 +2973,17 @@ document.addEventListener("DOMContentLoaded", () => {
         ]);
       });
       return ContentService.createTextOutput(JSON.stringify({ status: "success", count: data.visits.length }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    if (data.action === "send_email" && Array.isArray(data.recipients)) {
+      var emailSubj = data.subject || "Visit Tracker Executive Summary Report";
+      var emailBody = data.body || "Please find the Visit Tracker Activity Report.";
+      MailApp.sendEmail({
+        to: data.recipients.join(","),
+        subject: emailSubj,
+        body: emailBody
+      });
+      return ContentService.createTextOutput(JSON.stringify({ status: "success", action: "email_sent" }))
         .setMimeType(ContentService.MimeType.JSON);
     }
   } catch (err) {

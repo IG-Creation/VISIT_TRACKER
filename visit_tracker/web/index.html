@@ -1134,7 +1134,7 @@
   </div>
 
   <!-- Send Visit Report Email Modal -->
-  <div class="modal-overlay" id="send-email-modal" style="display:none;">
+  <div class="modal-overlay" id="send-email-modal">
     <div class="modal-3d" style="max-width: 600px;">
       <div class="modal-header-3d">
         <div class="modal-title">
@@ -1221,11 +1221,17 @@
       </div>
       <div class="modal-footer-3d" style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
         <button type="button" class="btn btn-reset" data-close="send-email-modal">Cancel</button>
-        <div style="display: flex; gap: 0.5rem;">
-          <button type="button" id="btn-open-mailto" class="btn btn-reset" style="background: #f1f5f9; color: #334155; border-color: #cbd5e1;" title="Open in Outlook / Default Mail App">
-            <span>📬</span> Default Mail App
+        <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+          <button type="button" id="btn-open-gmail" class="btn btn-reset" style="background:#fef2f2; color:#b91c1c; border-color:#fca5a5; padding:0.45rem 0.8rem;" title="Compose in Gmail Web">
+            <span>✉️</span> Gmail
           </button>
-          <button type="button" id="btn-confirm-send-email" class="btn btn-submit-3d" style="padding: 0.5rem 1.3rem;">
+          <button type="button" id="btn-open-outlook" class="btn btn-reset" style="background:#eff6ff; color:#1d4ed8; border-color:#93c5fd; padding:0.45rem 0.8rem;" title="Compose in Outlook Web">
+            <span>📧</span> Outlook
+          </button>
+          <button type="button" id="btn-open-mailto" class="btn btn-reset" style="background:#f8fafc; color:#334155; border-color:#cbd5e1; padding:0.45rem 0.8rem;" title="Open in Outlook / Default Mail App">
+            <span>📬</span> Mail App
+          </button>
+          <button type="button" id="btn-confirm-send-email" class="btn btn-submit-3d" style="padding: 0.45rem 1.25rem;">
             <span>🚀</span> Send Email Now
           </button>
         </div>
