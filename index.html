@@ -162,15 +162,22 @@
 
           <div class="section-body">
             
-            <!-- Visit Date -->
-            <div class="form-grid" style="grid-template-columns: 1fr;">
-              <div class="form-group" style="max-width: 320px;">
+            <!-- Visit Date & Visit Remarks Side-by-Side -->
+            <div class="visit-details-meta-grid">
+              <div class="form-group">
                 <label class="form-label" for="visit_date">
                   <span>🗓️</span> Visit Date Selection <span class="req">*</span>
                 </label>
                 <input type="date" id="visit_date" name="visit_date" class="form-input" required>
                 <span class="field-hint">Current or past date only (&le; 2 months before).</span>
                 <span id="err-visit-date" class="field-error">Date cannot be in future or &gt; 2 months past</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="visit_remarks">
+                  <span>📝</span> Visit Remarks / Tracking Notes
+                </label>
+                <input type="text" id="visit_remarks" name="visit_remarks" class="form-input" placeholder="e.g. Portfolio review, urgent KYC follow-up, verification">
+                <span class="field-hint">Brief remarks to easily identify and track this visit.</span>
               </div>
             </div>
 
@@ -900,8 +907,11 @@
             <button type="button" id="btn-flt-search" class="btn btn-submit-3d" style="padding: 0.4rem 1.1rem;">
               <span>🔍</span> Search
             </button>
-            <button type="button" id="btn-export-csv" class="btn btn-reset" style="background:#f0fdf4; color:#15803d; border-color:#bbf7d0; padding: 0.4rem 0.9rem;">
-              <span>📥</span> Export CSV
+            <button type="button" id="btn-export-excel" class="btn btn-reset btn-export-highlight" style="background:#f0fdf4; color:#15803d; border-color:#86efac; padding: 0.45rem 1rem;">
+              <span>📥</span> Download Excel
+            </button>
+            <button type="button" id="btn-send-mail" class="btn btn-reset btn-mail-highlight" style="background:#eff6ff; color:#1d4ed8; border-color:#93c5fd; padding: 0.45rem 1rem;">
+              <span>✉️</span> Send Mail
             </button>
           </div>
         </div>
@@ -1028,6 +1038,7 @@
                 <th>Entity / Client</th>
                 <th>Contact</th>
                 <th>Reason</th>
+                <th>Remarks</th>
                 <th>Location / Time</th>
                 <th>Photo</th>
                 <th>Actions</th>
@@ -1035,7 +1046,7 @@
             </thead>
             <tbody id="visits-table-body">
               <tr>
-                <td colspan="11" style="text-align: center; padding: 2rem; color: var(--slate-400);">Loading visits...</td>
+                <td colspan="12" style="text-align: center; padding: 2rem; color: var(--slate-400);">Loading visits...</td>
               </tr>
             </tbody>
           </table>
@@ -1101,14 +1112,114 @@
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">Master Notes</label>
-            <textarea id="edit_notes" class="form-textarea" rows="2" placeholder="Administrative notes..."></textarea>
+            <label class="form-label"><span>📝</span> Visit Remarks / Tracking Notes</label>
+            <textarea id="edit_notes" class="form-textarea" rows="2" placeholder="Update visit remarks or tracking notes..."></textarea>
           </div>
           <div class="modal-footer-3d" style="padding-left: 0; padding-right: 0; margin-bottom: -1.25rem;">
             <button type="button" class="btn btn-reset" data-close="edit-modal">Cancel</button>
             <button type="submit" class="btn btn-submit-3d">Save Changes</button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Send Visit Report Email Modal -->
+  <div class="modal-overlay" id="send-email-modal" style="display:none;">
+    <div class="modal-3d" style="max-width: 600px;">
+      <div class="modal-header-3d">
+        <div class="modal-title">
+          <span>✉️</span> Dispatch Visit Report via Email
+        </div>
+        <button type="button" class="close-btn" data-close="send-email-modal">&times;</button>
+      </div>
+      <div class="modal-body-3d">
+        
+        <!-- Recipient Input Box -->
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" for="email-input-field">
+            <span>📧</span> Enter Recipient Email ID(s) <span class="req">*</span>
+          </label>
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="email" id="email-input-field" class="form-input" placeholder="e.g. manager@fusionmicrofinance.com" style="flex: 1;">
+            <button type="button" id="btn-add-email-chip" class="btn btn-submit-3d" style="padding: 0.45rem 1rem; font-size: 0.82rem; white-space: nowrap;">
+              <span>➕</span> Add
+            </button>
+          </div>
+          <span class="field-hint">Enter one or multiple email addresses (comma, space, or press Enter).</span>
+        </div>
+
+        <!-- Selected Active Email Chips -->
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-size: 0.78rem; color: var(--slate-600); margin-bottom: 0.3rem;">
+            <span>Selected Recipients:</span>
+          </label>
+          <div id="active-email-chips" class="email-chips-wrap">
+            <span class="empty-chips-hint" id="empty-chips-hint">No email addresses added yet. Enter above or select from previous below.</span>
+          </div>
+        </div>
+
+        <!-- Previously Used Email IDs Section -->
+        <div class="form-group" style="margin-bottom: 0.85rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-md); padding: 0.75rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+            <label class="form-label" style="margin-bottom: 0; font-size: 0.8rem; color: var(--slate-700);">
+              <span>🕒</span> Previous Recipient Email IDs <small style="color:var(--slate-500); font-weight:normal;">(Click to select/add)</small>
+            </label>
+            <button type="button" id="btn-clear-email-history" class="btn-text-link" style="font-size: 0.72rem; color: #ef4444; background: transparent; border: none; cursor: pointer;">
+              Clear History
+            </button>
+          </div>
+          <div id="previous-emails-list" class="recent-emails-chips-wrap">
+            <span style="font-size: 0.75rem; color: var(--slate-400);">No previous email addresses stored yet.</span>
+          </div>
+        </div>
+
+        <!-- Email Subject & Custom Message -->
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" for="email-subject-input">
+            <span>🏷️</span> Email Subject Line
+          </label>
+          <input type="text" id="email-subject-input" class="form-input" value="Visit Tracker Executive Summary &amp; Excel Master Report">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" for="email-custom-note">
+            <span>📝</span> Note / Message to Recipient (Optional)
+          </label>
+          <textarea id="email-custom-note" class="form-textarea" rows="2" placeholder="e.g. Please review the updated visit records with GPS coordinates, photos, and remarks..."></textarea>
+        </div>
+
+        <!-- Report Payload Summary Card -->
+        <div class="email-report-summary-box">
+          <div class="email-report-summary-header">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span>📊</span>
+              <strong>Report Summary &amp; Excel Attachment</strong>
+            </div>
+            <span class="badge-tag-3d" id="email-summary-count-badge" style="background:#e0f2fe; color:#0369a1; border-color:#7dd3fc;">0 Records</span>
+          </div>
+          <div class="email-report-summary-body" id="email-summary-preview-body">
+            <div style="font-size: 0.78rem; color: var(--slate-600); margin-bottom: 0.4rem;">
+              <strong>Attachment:</strong> <span style="font-family: monospace; color:#15803d;">visit_tracker_report.xlsx</span> (All details populated).
+            </div>
+            <div id="email-summary-stats-grid" class="email-stats-row"></div>
+          </div>
+        </div>
+
+        <!-- Status Message Banner -->
+        <div id="email-dispatch-status" style="display: none; margin-top: 0.75rem;"></div>
+
+      </div>
+      <div class="modal-footer-3d" style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+        <button type="button" class="btn btn-reset" data-close="send-email-modal">Cancel</button>
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="button" id="btn-open-mailto" class="btn btn-reset" style="background: #f1f5f9; color: #334155; border-color: #cbd5e1;" title="Open in Outlook / Default Mail App">
+            <span>📬</span> Default Mail App
+          </button>
+          <button type="button" id="btn-confirm-send-email" class="btn btn-submit-3d" style="padding: 0.5rem 1.3rem;">
+            <span>🚀</span> Send Email Now
+          </button>
+        </div>
       </div>
     </div>
   </div>

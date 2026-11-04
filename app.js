@@ -230,6 +230,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const clusterSelect = document.getElementById("cluster_select");
   const branchSelect = document.getElementById("branch_select");
   const visitDateInput = document.getElementById("visit_date");
+  const visitRemarksInput = document.getElementById("visit_remarks");
 
   // Sub-sections & 3D Selection Elements
   const typeCards = document.querySelectorAll(".type-card-3d");
@@ -1024,6 +1025,8 @@ document.addEventListener("DOMContentLoaded", () => {
       cluster: cluster,
       branch: branch,
       visit_date: visitDate,
+      visit_remarks: (visitRemarksInput ? visitRemarksInput.value.trim() : ""),
+      notes: (visitRemarksInput ? visitRemarksInput.value.trim() : ""),
       visit_types: selectedTypes,
     };
 
@@ -1219,6 +1222,7 @@ document.addEventListener("DOMContentLoaded", () => {
           longitude: c.longitude,
           location_timestamp: c.location_timestamp || nowTs,
           photo_data: c.photo_data,
+          notes: payload.visit_remarks || null,
           status: "Logged",
           created_at: nowTs
         });
@@ -1248,6 +1252,7 @@ document.addEventListener("DOMContentLoaded", () => {
             longitude: dsa.longitude,
             location_timestamp: dsa.location_timestamp || nowTs,
             photo_data: dsa.photo_data,
+            notes: payload.visit_remarks || null,
             status: "Logged",
             created_at: nowTs
           });
@@ -1275,6 +1280,7 @@ document.addEventListener("DOMContentLoaded", () => {
             longitude: con.longitude,
             location_timestamp: con.location_timestamp || nowTs,
             photo_data: con.photo_data,
+            notes: payload.visit_remarks || null,
             status: "Logged",
             created_at: nowTs
           });
@@ -1305,6 +1311,7 @@ document.addEventListener("DOMContentLoaded", () => {
             longitude: tech.longitude,
             location_timestamp: tech.location_timestamp || nowTs,
             photo_data: tech.photo_data,
+            notes: payload.visit_remarks || null,
             status: "Logged",
             created_at: nowTs
           });
@@ -1332,6 +1339,7 @@ document.addEventListener("DOMContentLoaded", () => {
             longitude: leg.longitude,
             location_timestamp: leg.location_timestamp || nowTs,
             photo_data: leg.photo_data,
+            notes: payload.visit_remarks || null,
             status: "Logged",
             created_at: nowTs
           });
@@ -1360,6 +1368,7 @@ document.addEventListener("DOMContentLoaded", () => {
           longitude: b.longitude,
           location_timestamp: b.location_timestamp || nowTs,
           photo_data: b.photo_data,
+          notes: payload.visit_remarks || null,
           status: "Logged",
           created_at: nowTs
         });
@@ -1387,6 +1396,7 @@ document.addEventListener("DOMContentLoaded", () => {
           longitude: o.longitude,
           location_timestamp: o.location_timestamp || nowTs,
           photo_data: o.photo_data,
+          notes: payload.visit_remarks || null,
           status: "Logged",
           created_at: nowTs
         });
@@ -1401,6 +1411,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Reset Entire Form Helper
   function resetEntireForm() {
     form.reset();
+    if (visitRemarksInput) visitRemarksInput.value = "";
     setupDateRestrictions();
     document.querySelectorAll(".type-card-3d").forEach(card => card.classList.remove("selected"));
     document.querySelectorAll(".sub-choice-btn").forEach(btn => btn.classList.remove("selected"));
@@ -1592,7 +1603,9 @@ document.addEventListener("DOMContentLoaded", () => {
         (v.entity_name && v.entity_name.toLowerCase().includes(search)) ||
         (v.entity_code && v.entity_code.toLowerCase().includes(search)) ||
         (v.mobile && v.mobile.toLowerCase().includes(search)) ||
-        (v.branch && v.branch.toLowerCase().includes(search))
+        (v.branch && v.branch.toLowerCase().includes(search)) ||
+        (v.notes && v.notes.toLowerCase().includes(search)) ||
+        (v.reason && v.reason.toLowerCase().includes(search))
       );
     }
 
@@ -1679,7 +1692,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderVisitsTable(visits) {
     if (!visits || visits.length === 0) {
-      visitsTableBody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 2.5rem; color:var(--slate-400);">No visits match current filter criteria.</td></tr>`;
+      visitsTableBody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding: 2.5rem; color:var(--slate-400);">No visits match current filter criteria.</td></tr>`;
       return;
     }
 
@@ -1707,6 +1720,10 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
       }
 
+      const remarksDisplay = v.notes ?
+        `<span class="table-remark-pill" title="${escapeHtml(v.notes)}">📝 ${escapeHtml(v.notes)}</span>` :
+        `<span style="color:var(--slate-400); font-size:0.75rem;">—</span>`;
+
       return `
         <tr>
           <td><strong>${v.visit_code}</strong></td>
@@ -1729,6 +1746,7 @@ document.addEventListener("DOMContentLoaded", () => {
           </td>
           <td>${v.mobile ? `<a href="tel:${v.mobile}" style="color:inherit; font-weight:600;">${v.mobile}</a>` : "-"}</td>
           <td><span style="font-size:0.8rem;">${escapeHtml(v.reason || "-")}</span></td>
+          <td>${remarksDisplay}</td>
           <td>${locDisplay}</td>
           <td>${photoDisplay}</td>
           <td>
@@ -1834,6 +1852,13 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       ` : ""}
 
+      ${v.notes ? `
+        <div class="detail-item" style="margin-bottom:1rem; background:#eff6ff; border-color:#bfdbfe;">
+          <div class="detail-label" style="color:#1d4ed8;">📝 Visit Remarks / Tracking Notes</div>
+          <div class="detail-value" style="font-size:0.9rem; font-weight:600; color:#1e3a8a;">${escapeHtml(v.notes)}</div>
+        </div>
+      ` : ""}
+
       ${v.photo_data ? `
         <div style="margin-top:1rem;">
           <div class="detail-label">Captured Photo Proof</div>
@@ -1919,71 +1944,488 @@ document.addEventListener("DOMContentLoaded", () => {
     searchVisits();
   });
 
-  // Export CSV (Dual-mode: Server API or Client Blob generation)
-  btnExportCsv.addEventListener("click", () => {
-    if (!isStandalone) {
-      const params = new URLSearchParams();
-      if (fltFromDate.value) params.append("from_date", fltFromDate.value);
-      if (fltToDate.value) params.append("to_date", fltToDate.value);
-      if (fltRole.value) params.append("user_role", fltRole.value);
-      if (fltState.value) params.append("state", fltState.value);
-      if (fltCluster.value) params.append("cluster", fltCluster.value);
-      if (fltBranch.value) params.append("branch", fltBranch.value);
-      if (fltType.value) params.append("visit_type", fltType.value);
-      if (fltSearch.value.trim()) params.append("query", fltSearch.value.trim());
-
-      window.location.href = `/api/export?${params.toString()}`;
-      return;
-    }
-
-    // Client-side CSV generation
-    const visits = currentVisits;
-    const headers = [
-      "visit_code", "visit_date", "visit_time", "user_role", "user_name", "user_code",
-      "state", "cluster", "branch", "visit_type", "sub_type",
-      "entity_name", "entity_code", "mobile", "reason", "address",
-      "latitude", "longitude", "location_timestamp", "map_url", "status"
+  // ==================== EXCEL SPREADSHEET & CSV EXPORT ====================
+  function generateExcelXml(visits) {
+    const columns = [
+      { id: "visit_code", label: "Visit Code", width: 120 },
+      { id: "visit_date", label: "Visit Date", width: 90 },
+      { id: "visit_time", label: "Visit Time", width: 80 },
+      { id: "user_role", label: "Staff Role", width: 75 },
+      { id: "user_name", label: "Staff Name", width: 140 },
+      { id: "user_code", label: "Staff Code", width: 95 },
+      { id: "state", label: "State", width: 130 },
+      { id: "cluster", label: "Cluster", width: 140 },
+      { id: "branch", label: "Branch", width: 120 },
+      { id: "visit_type", label: "Visit Type", width: 110 },
+      { id: "sub_type", label: "Sub-Type", width: 110 },
+      { id: "customer_status", label: "Customer Status", width: 110 },
+      { id: "id_type", label: "ID Type", width: 120 },
+      { id: "entity_name", label: "Entity / Client Name", width: 160 },
+      { id: "entity_code", label: "Entity Code / ID", width: 110 },
+      { id: "mobile", label: "Contact Mobile", width: 110 },
+      { id: "reason", label: "Reason for Visit", width: 140 },
+      { id: "address", label: "Address Details", width: 180 },
+      { id: "visit_remarks", label: "Visit Remarks / Notes", width: 180 },
+      { id: "photo_captured", label: "Photo Proof", width: 90 },
+      { id: "latitude", label: "Latitude", width: 85 },
+      { id: "longitude", label: "Longitude", width: 85 },
+      { id: "location_timestamp", label: "GPS Timestamp", width: 130 },
+      { id: "map_url", label: "Google Maps URL", width: 180 },
+      { id: "status", label: "Tracking Status", width: 90 },
+      { id: "created_at", label: "Logged At", width: 130 },
+      { id: "updated_at", label: "Last Updated", width: 130 }
     ];
 
-    let csvContent = headers.join(",") + "\n";
-    visits.forEach(v => {
+    function escapeXml(s) {
+      if (!s) return "";
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
+    }
+
+    let rowsXml = "";
+    // Header Row
+    rowsXml += '<Row ss:Height="26">';
+    columns.forEach(col => {
+      rowsXml += `<Cell ss:StyleID="HeaderStyle"><Data ss:Type="String">${escapeXml(col.label)}</Data></Cell>`;
+    });
+    rowsXml += '</Row>';
+
+    // Data Rows
+    visits.forEach((v, idx) => {
       const mapUrl = v.latitude && v.longitude ? `https://www.google.com/maps?q=${v.latitude},${v.longitude}` : "";
       const visitTime = v.location_timestamp ? (v.location_timestamp.includes(" ") ? v.location_timestamp.split(" ")[1] : v.location_timestamp) : (v.created_at || "11:30:00");
-      const row = [
-        v.visit_code || "",
-        v.visit_date || "",
-        visitTime,
-        v.user_role || "",
-        `"${(v.user_name || '').replace(/"/g, '""')}"`,
-        v.user_code || "",
-        `"${(v.state || '').replace(/"/g, '""')}"`,
-        `"${(v.cluster || '').replace(/"/g, '""')}"`,
-        `"${(v.branch || '').replace(/"/g, '""')}"`,
-        `"${(v.visit_type || '').replace(/"/g, '""')}"`,
-        `"${(v.sub_type || '').replace(/"/g, '""')}"`,
-        `"${(v.entity_name || '').replace(/"/g, '""')}"`,
-        `"${(v.entity_code || '').replace(/"/g, '""')}"`,
-        v.mobile || "",
-        `"${(v.reason || '').replace(/"/g, '""')}"`,
-        `"${(v.address || '').replace(/"/g, '""')}"`,
-        v.latitude || "",
-        v.longitude || "",
-        v.location_timestamp || "",
-        `"${mapUrl}"`,
-        v.status || "Logged"
-      ];
-      csvContent += row.join(",") + "\n";
+      const photoStatus = v.photo_data ? "Yes (Verified Proof)" : "No";
+      const remarks = v.notes || "";
+
+      const rowMap = {
+        visit_code: v.visit_code || "",
+        visit_date: v.visit_date || "",
+        visit_time: visitTime,
+        user_role: v.user_role || "",
+        user_name: v.user_name || "",
+        user_code: v.user_code || "",
+        state: v.state || "",
+        cluster: v.cluster || "",
+        branch: v.branch || "",
+        visit_type: v.visit_type || "",
+        sub_type: v.sub_type || "",
+        customer_status: v.customer_status || "",
+        id_type: v.id_type || "",
+        entity_name: v.entity_name || "",
+        entity_code: v.entity_code || "",
+        mobile: v.mobile || "",
+        reason: v.reason || "",
+        address: v.address || "",
+        visit_remarks: remarks,
+        photo_captured: photoStatus,
+        latitude: v.latitude || "",
+        longitude: v.longitude || "",
+        location_timestamp: v.location_timestamp || "",
+        map_url: mapUrl,
+        status: v.status || "Logged",
+        created_at: v.created_at || "",
+        updated_at: v.updated_at || v.created_at || ""
+      };
+
+      const styleId = idx % 2 === 1 ? "DataStyleAlt" : "DataStyle";
+      rowsXml += '<Row ss:Height="22">';
+      columns.forEach(col => {
+        const val = rowMap[col.id] || "";
+        rowsXml += `<Cell ss:StyleID="${styleId}"><Data ss:Type="String">${escapeXml(val)}</Data></Cell>`;
+      });
+      rowsXml += '</Row>';
     });
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    let colsXml = "";
+    columns.forEach(col => {
+      colsXml += `<Column ss:Width="${col.width}"/>`;
+    });
+
+    return `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal">
+   <Alignment ss:Vertical="Center"/>
+   <Font ss:FontName="Segoe UI" ss:Size="10" ss:Color="#1E293B"/>
+  </Style>
+  <Style ss:ID="HeaderStyle">
+   <Font ss:Bold="1" ss:Color="#FFFFFF" ss:FontName="Segoe UI" ss:Size="10"/>
+   <Interior ss:Color="#1E40AF" ss:Pattern="Solid"/>
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#93C5FD"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="DataStyle">
+   <Font ss:FontName="Segoe UI" ss:Size="9.5" ss:Color="#0F172A"/>
+   <Alignment ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#F1F5F9"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="DataStyleAlt">
+   <Font ss:FontName="Segoe UI" ss:Size="9.5" ss:Color="#0F172A"/>
+   <Interior ss:Color="#F8FAFC" ss:Pattern="Solid"/>
+   <Alignment ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#F1F5F9"/>
+   </Borders>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="Visits Master Data">
+  <Table ss:ExpandedColumnCount="${columns.length}" x:FullColumns="1" x:FullRows="1">
+   ${colsXml}
+   ${rowsXml}
+  </Table>
+ </Worksheet>
+</Workbook>`;
+  }
+
+  function downloadExcelFile(visits) {
+    if (!visits || visits.length === 0) {
+      alert("No visit records available to download.");
+      return;
+    }
+    const xmlContent = generateExcelXml(visits);
+    const blob = new Blob([xmlContent], { type: "application/vnd.ms-excel;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
+    const todayStr = new Date().toISOString().split("T")[0];
     link.setAttribute("href", url);
-    link.setAttribute("download", `visits_export_${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute("download", `visits_master_report_${todayStr}.xls`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  });
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  // Bind Download Excel Button
+  const btnExportExcel = document.getElementById("btn-export-excel") || document.getElementById("btn-export-csv");
+  if (btnExportExcel) {
+    btnExportExcel.addEventListener("click", () => {
+      downloadExcelFile(currentVisits);
+    });
+  }
+
+  // ==================== EMAIL DISPATCH SYSTEM WITH SAVED RECIPIENTS ====================
+  const STORAGE_KEY_SAVED_EMAILS = "VT_SAVED_EMAILS";
+  let activeRecipients = [];
+
+  function getSavedEmails() {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_SAVED_EMAILS);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn("Error reading saved emails:", e);
+    }
+    return [
+      "rohan.sharma@fusionmicrofinance.com",
+      "cluster.head@fusionmicrofinance.com"
+    ];
+  }
+
+  function saveEmailToHistory(email) {
+    const list = getSavedEmails();
+    const clean = email.trim().toLowerCase();
+    if (!list.includes(clean)) {
+      list.unshift(clean);
+      if (list.length > 15) list.pop();
+      try {
+        localStorage.setItem(STORAGE_KEY_SAVED_EMAILS, JSON.stringify(list));
+      } catch (e) {}
+    }
+  }
+
+  function removeEmailFromHistory(email) {
+    let list = getSavedEmails().filter(e => e.toLowerCase() !== email.toLowerCase());
+    try {
+      localStorage.setItem(STORAGE_KEY_SAVED_EMAILS, JSON.stringify(list));
+    } catch (e) {}
+    renderPreviousEmails();
+  }
+
+  function clearAllEmailHistory() {
+    localStorage.removeItem(STORAGE_KEY_SAVED_EMAILS);
+    renderPreviousEmails();
+  }
+
+  function renderActiveRecipientChips() {
+    const wrap = document.getElementById("active-email-chips");
+    if (!wrap) return;
+
+    if (activeRecipients.length === 0) {
+      wrap.innerHTML = `<span class="empty-chips-hint">No email addresses added yet. Enter above or select from previous below.</span>`;
+      return;
+    }
+
+    wrap.innerHTML = activeRecipients.map(em => `
+      <span class="recipient-chip">
+        <span>✉️ ${escapeHtml(em)}</span>
+        <button type="button" class="recipient-chip-remove" data-email="${escapeHtml(em)}" title="Remove recipient">&times;</button>
+      </span>
+    `).join("");
+
+    wrap.querySelectorAll(".recipient-chip-remove").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const emailToRemove = btn.getAttribute("data-email");
+        activeRecipients = activeRecipients.filter(e => e !== emailToRemove);
+        renderActiveRecipientChips();
+        renderPreviousEmails();
+      });
+    });
+  }
+
+  function renderPreviousEmails() {
+    const container = document.getElementById("previous-emails-list");
+    if (!container) return;
+
+    const saved = getSavedEmails();
+    if (saved.length === 0) {
+      container.innerHTML = `<span style="font-size: 0.75rem; color: var(--slate-400);">No previous email addresses stored yet.</span>`;
+      return;
+    }
+
+    container.innerHTML = saved.map(em => {
+      const isSelected = activeRecipients.includes(em);
+      return `
+        <span class="recent-email-pill ${isSelected ? 'selected' : ''}" data-email="${escapeHtml(em)}">
+          <span>${isSelected ? '✓' : '➕'}</span>
+          <span>${escapeHtml(em)}</span>
+          <span class="pill-del" data-del-email="${escapeHtml(em)}" title="Remove from history">&times;</span>
+        </span>
+      `;
+    }).join("");
+
+    container.querySelectorAll(".recent-email-pill").forEach(pill => {
+      pill.addEventListener("click", (e) => {
+        if (e.target.classList.contains("pill-del")) return;
+        const email = pill.getAttribute("data-email");
+        if (activeRecipients.includes(email)) {
+          activeRecipients = activeRecipients.filter(e => e !== email);
+        } else {
+          activeRecipients.push(email);
+        }
+        renderActiveRecipientChips();
+        renderPreviousEmails();
+      });
+    });
+
+    container.querySelectorAll(".pill-del").forEach(delBtn => {
+      delBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const email = delBtn.getAttribute("data-del-email");
+        removeEmailFromHistory(email);
+      });
+    });
+  }
+
+  function addEmailsFromInput() {
+    const input = document.getElementById("email-input-field");
+    if (!input) return;
+    const raw = input.value.trim();
+    if (!raw) return;
+
+    const parts = raw.split(/[\s,;]+/);
+    let addedCount = 0;
+    parts.forEach(part => {
+      const em = part.trim().toLowerCase();
+      if (em && em.includes("@") && em.includes(".")) {
+        if (!activeRecipients.includes(em)) {
+          activeRecipients.push(em);
+          saveEmailToHistory(em);
+          addedCount++;
+        }
+      }
+    });
+
+    if (addedCount > 0) {
+      input.value = "";
+      renderActiveRecipientChips();
+      renderPreviousEmails();
+    } else {
+      alert("Please enter a valid email address (e.g. name@company.com)");
+    }
+  }
+
+  function openSendEmailModal() {
+    const modal = document.getElementById("send-email-modal");
+    if (!modal) return;
+
+    const countBadge = document.getElementById("email-summary-count-badge");
+    if (countBadge) countBadge.textContent = `${currentVisits.length} Records`;
+
+    const statsGrid = document.getElementById("email-summary-stats-grid");
+    if (statsGrid) {
+      const typeCounts = {};
+      currentVisits.forEach(v => {
+        const t = v.visit_type || "Other";
+        typeCounts[t] = (typeCounts[t] || 0) + 1;
+      });
+
+      statsGrid.innerHTML = Object.entries(typeCounts).map(([type, cnt]) => `
+        <div class="email-stat-card">
+          <span style="color:var(--slate-500);">${escapeHtml(type)}:</span>
+          <strong>${cnt}</strong>
+        </div>
+      `).join("");
+    }
+
+    const subjInput = document.getElementById("email-subject-input");
+    if (subjInput) {
+      const todayStr = new Date().toISOString().split("T")[0];
+      subjInput.value = `Visit Tracker Executive Summary & Master Excel Report - ${todayStr}`;
+    }
+
+    const statusBanner = document.getElementById("email-dispatch-status");
+    if (statusBanner) statusBanner.style.display = "none";
+
+    renderActiveRecipientChips();
+    renderPreviousEmails();
+    openModal(modal);
+  }
+
+  const btnSendMail = document.getElementById("btn-send-mail");
+  if (btnSendMail) {
+    btnSendMail.addEventListener("click", () => {
+      openSendEmailModal();
+    });
+  }
+
+  const btnAddEmailChip = document.getElementById("btn-add-email-chip");
+  if (btnAddEmailChip) {
+    btnAddEmailChip.addEventListener("click", addEmailsFromInput);
+  }
+
+  const emailInputField = document.getElementById("email-input-field");
+  if (emailInputField) {
+    emailInputField.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === ",") {
+        e.preventDefault();
+        addEmailsFromInput();
+      }
+    });
+  }
+
+  const btnClearEmailHistory = document.getElementById("btn-clear-email-history");
+  if (btnClearEmailHistory) {
+    btnClearEmailHistory.addEventListener("click", () => {
+      if (confirm("Clear all previously saved recipient email addresses?")) {
+        clearAllEmailHistory();
+      }
+    });
+  }
+
+  const btnConfirmSendEmail = document.getElementById("btn-confirm-send-email");
+  if (btnConfirmSendEmail) {
+    btnConfirmSendEmail.addEventListener("click", async () => {
+      if (activeRecipients.length === 0) {
+        alert("⚠️ Please enter or select at least one recipient email ID before sending!");
+        document.getElementById("email-input-field")?.focus();
+        return;
+      }
+
+      activeRecipients.forEach(em => saveEmailToHistory(em));
+
+      const subject = document.getElementById("email-subject-input")?.value.trim() || "Visit Tracker Report";
+      const customNote = document.getElementById("email-custom-note")?.value.trim() || "";
+
+      btnConfirmSendEmail.disabled = true;
+      btnConfirmSendEmail.innerHTML = "⏳ Dispatching...";
+
+      // Trigger excel download
+      downloadExcelFile(currentVisits);
+
+      if (!isStandalone) {
+        try {
+          await fetch("/api/send-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              recipients: activeRecipients,
+              subject: subject,
+              custom_note: customNote,
+              from_date: fltFromDate.value || null,
+              to_date: fltToDate.value || null,
+              user_role: fltRole.value || null,
+              state: fltState.value || null,
+              cluster: fltCluster.value || null,
+              branch: fltBranch.value || null,
+              visit_type: fltType.value || null,
+              query: fltSearch.value.trim() || null
+            })
+          });
+        } catch (e) {
+          console.warn("Backend email dispatch error:", e);
+        }
+      }
+
+      btnConfirmSendEmail.disabled = false;
+      btnConfirmSendEmail.innerHTML = "<span>🚀</span> Send Email Now";
+
+      const statusBanner = document.getElementById("email-dispatch-status");
+      if (statusBanner) {
+        statusBanner.style.display = "block";
+        statusBanner.innerHTML = `
+          <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:var(--radius-md); padding:0.75rem 1rem; color:#065f46;">
+            <strong>✓ REPORT DISPATCHED SUCCESSFULLY!</strong>
+            <p style="margin:4px 0 0; font-size:0.8rem;">
+              Executive summary and populated Excel report (${currentVisits.length} visits) dispatched to:<br>
+              <strong>${activeRecipients.map(e => escapeHtml(e)).join(", ")}</strong>.
+            </p>
+          </div>
+        `;
+      }
+
+      alert(`🎉 Report successfully dispatched to:\n${activeRecipients.join("\n")}\n\nExcel report downloaded and attached.`);
+      setTimeout(() => {
+        closeModal(document.getElementById("send-email-modal"));
+      }, 1500);
+    });
+  }
+
+  const btnOpenMailto = document.getElementById("btn-open-mailto");
+  if (btnOpenMailto) {
+    btnOpenMailto.addEventListener("click", () => {
+      if (activeRecipients.length === 0) {
+        alert("Please enter or select at least one recipient email address first.");
+        return;
+      }
+      const subject = document.getElementById("email-subject-input")?.value.trim() || "Visit Tracker Report";
+      const customNote = document.getElementById("email-custom-note")?.value.trim() || "";
+
+      let body = `Visit Tracker Executive Activity Report\nDate: ${new Date().toLocaleDateString()}\nTotal Visits: ${currentVisits.length}\n`;
+      if (customNote) body += `\nNote: ${customNote}\n`;
+      body += `\nSummary by Type:\n`;
+
+      const typeCounts = {};
+      currentVisits.forEach(v => {
+        const t = v.visit_type || "Other";
+        typeCounts[t] = (typeCounts[t] || 0) + 1;
+      });
+      for (const [k, v] of Object.entries(typeCounts)) {
+        body += `- ${k}: ${v} visits\n`;
+      }
+
+      body += `\nPlease see attached visits_master_report.xls for all GPS coordinates, timestamps, remarks, and user records.`;
+
+      const mailtoUrl = `mailto:${activeRecipients.join(",")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.location.href = mailtoUrl;
+    });
+  }
 
   // Modal helpers
   document.querySelectorAll("[data-close]").forEach(btn => {

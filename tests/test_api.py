@@ -114,6 +114,21 @@ class TestAPIDispatch(unittest.TestCase):
         self.assertIn("text/csv", headers.get("Content-Type", ""))
         self.assertIn("visit_code", csv_data)
 
+        # Excel format export
+        status_xls, xls_data, headers_xls = dispatch_api(self.service, "GET", "/api/export", {"format": ["excel"]}, {})
+        self.assertEqual(status_xls, 200)
+        self.assertIn("application/vnd.ms-excel", headers_xls.get("Content-Type", ""))
+        self.assertIn("urn:schemas-microsoft-com:office:spreadsheet", xls_data)
+
+        # Send email endpoint
+        status_email, email_res, _ = dispatch_api(self.service, "POST", "/api/send-email", {}, {
+            "recipients": ["ceo@fusionmicrofinance.com"],
+            "subject": "Executive Weekly Visits Summary"
+        })
+        self.assertEqual(status_email, 200)
+        self.assertTrue(email_res["success"])
+        self.assertEqual(email_res["recipients"], ["ceo@fusionmicrofinance.com"])
+
 
 class TestHTTPSocketServer(unittest.TestCase):
     @classmethod

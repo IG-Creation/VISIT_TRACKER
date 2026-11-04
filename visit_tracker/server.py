@@ -88,16 +88,28 @@ def dispatch_api(
             branch = params.get("branch", [None])[0]
             vtype = params.get("visit_type", [None])[0]
             query = params.get("query", [None])[0]
+            fmt = params.get("format", ["csv"])[0].lower()
 
-            csv_data = service.export_visits_csv(
-                from_date=from_date, to_date=to_date, user_role=role,
-                state=state, cluster=cluster, branch=branch,
-                visit_type=vtype, search_query=query
-            )
-            return 200, csv_data, {
-                "Content-Type": "text/csv; charset=utf-8",
-                "Content-Disposition": 'attachment; filename="visit_tracker_export.csv"'
-            }
+            if fmt in ("excel", "xlsx", "xls"):
+                excel_data = service.export_visits_excel(
+                    from_date=from_date, to_date=to_date, user_role=role,
+                    state=state, cluster=cluster, branch=branch,
+                    visit_type=vtype, search_query=query
+                )
+                return 200, excel_data, {
+                    "Content-Type": "application/vnd.ms-excel; charset=utf-8",
+                    "Content-Disposition": 'attachment; filename="visit_tracker_export.xls"'
+                }
+            else:
+                csv_data = service.export_visits_csv(
+                    from_date=from_date, to_date=to_date, user_role=role,
+                    state=state, cluster=cluster, branch=branch,
+                    visit_type=vtype, search_query=query
+                )
+                return 200, csv_data, {
+                    "Content-Type": "text/csv; charset=utf-8",
+                    "Content-Disposition": 'attachment; filename="visit_tracker_export.csv"'
+                }
 
         else:
             return 404, {"error": f"Endpoint not found: {path}"}, headers
@@ -106,6 +118,34 @@ def dispatch_api(
         if path == "/api/visits/submit-multi":
             created = service.submit_multi_visits(body)
             return 201, {"success": True, "created_count": len(created), "visits": [v.to_dict() for v in created]}, headers
+
+        elif path == "/api/send-email":
+            recipients = body.get("recipients", [])
+            subject = body.get("subject")
+            custom_note = body.get("custom_note")
+            from_date = body.get("from_date")
+            to_date = body.get("to_date")
+            role = body.get("user_role")
+            state = body.get("state")
+            cluster = body.get("cluster")
+            branch = body.get("branch")
+            vtype = body.get("visit_type")
+            query = body.get("query")
+
+            result = service.send_email_report(
+                recipients=recipients,
+                from_date=from_date,
+                to_date=to_date,
+                user_role=role,
+                state=state,
+                cluster=cluster,
+                branch=branch,
+                visit_type=vtype,
+                search_query=query,
+                subject=subject,
+                custom_note=custom_note
+            )
+            return 200, result, headers
 
         elif path == "/api/seed":
             service.seed_demo_visits()
@@ -142,7 +182,7 @@ class TrackerRequestHandler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=WEB_DIR, **kwargs)
 
     def _send_payload(self, status: int, data: Any, extra_headers: Optional[Dict[str, str]] = None) -> None:
-        if isinstance(data, str) and extra_headers and "text/csv" in extra_headers.get("Content-Type", ""):
+        if isinstance(data, str) and extra_headers and ("text/csv" in extra_headers.get("Content-Type", "") or "application/vnd.ms-excel" in extra_headers.get("Content-Type", "")):
             payload = data.encode("utf-8")
         else:
             payload = json.dumps(data, indent=2, default=str).encode("utf-8")

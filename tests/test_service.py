@@ -211,6 +211,52 @@ class TestTrackerService(unittest.TestCase):
         self.assertIn("user_role", csv_data)
         self.assertIn("user_code", csv_data)
         self.assertIn("map_url", csv_data)
+        self.assertIn("visit_remarks", csv_data)
+
+    def test_excel_export(self):
+        self.service.seed_demo_visits()
+        excel_data = self.service.export_visits_excel()
+        self.assertIn('<?xml version="1.0"?>', excel_data)
+        self.assertIn('urn:schemas-microsoft-com:office:spreadsheet', excel_data)
+        self.assertIn('Visit Code', excel_data)
+        self.assertIn('Visit Remarks / Notes', excel_data)
+
+    def test_visit_remarks_submission_and_search(self):
+        payload = {
+            "user_role": "BDM",
+            "user_name": "Kavita Rao",
+            "user_code": "FMF554433",
+            "state": "Karnataka",
+            "cluster": "Bangalore Cluster",
+            "branch": "Bangalore Central",
+            "visit_date": self.today,
+            "visit_remarks": "Critical quarterly portfolio audit",
+            "visit_types": ["Other Visit"],
+            "other_visit": {
+                "name": "Audit Commission",
+                "mobile": "9845012345",
+                "reason": "Quarterly audit"
+            }
+        }
+        created = self.service.submit_multi_visits(payload)
+        self.assertEqual(len(created), 1)
+        self.assertEqual(created[0].notes, "Critical quarterly portfolio audit")
+
+        # Search by remarks
+        matched = self.service.list_visits(search_query="quarterly portfolio")
+        self.assertEqual(len(matched), 1)
+        self.assertEqual(matched[0].id, created[0].id)
+
+    def test_send_email_report(self):
+        self.service.seed_demo_visits()
+        result = self.service.send_email_report(
+            recipients=["manager@fusionmicrofinance.com", "audit@fusionmicrofinance.com"],
+            subject="Monthly Executive Visit Summary",
+            custom_note="Please review the attached Excel report."
+        )
+        self.assertTrue(result["success"])
+        self.assertEqual(len(result["recipients"]), 2)
+        self.assertGreaterEqual(result["total_records"], 2)
 
 
 if __name__ == "__main__":
